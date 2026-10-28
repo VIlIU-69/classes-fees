@@ -50,6 +50,33 @@ td input{width:70px;text-align:right;padding:6px}
 .days i{display:block;background:var(--gold);border-radius:4px 4px 0 0;min-height:2px}
 .login{max-width:380px;margin:40px auto}
 .login label{display:block;margin:10px 0 4px;font-weight:600}.login input{width:100%}
+/* ===== Stylish sign-in ===== */
+body:has(#vLogin:not(.hide)){background:radial-gradient(circle at 15% 10%,#e3f1ff 0,transparent 45%),radial-gradient(circle at 90% 90%,#fff3cf 0,transparent 40%),linear-gradient(160deg,#eef5ff,#f8f7f3)}
+#vLogin.login{max-width:420px;margin:28px auto;padding:0;overflow:hidden;border:1px solid #cfe0f5;border-radius:16px;box-shadow:0 18px 40px rgba(23,53,107,.16)}
+.lhead{background:linear-gradient(135deg,var(--navy),#24509c);color:#fff;text-align:center;padding:26px 20px 22px;border-bottom:4px solid var(--gold)}
+.lhead img{height:84px;width:84px;object-fit:contain;border-radius:50%;background:#fff;padding:4px;box-shadow:0 0 0 4px rgba(255,255,255,.25)}
+.lhead h2{font-size:1.3rem;margin-top:12px;line-height:1.25}
+.lhead p{margin:4px 0 0;font-size:.9rem;opacity:.85;letter-spacing:.04em}
+.lbody{padding:22px 24px 8px}
+.lbody h3{font-size:1.15rem;color:var(--navy)}
+.lbody .mut{margin:4px 0 8px}
+.fld{position:relative}
+.fld .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:1rem;opacity:.55;pointer-events:none}
+.fld input{padding:11px 42px 11px 38px;border:1px solid #c5d3e8;border-radius:10px;font-size:1rem;background:#f9fbff;transition:border-color .15s,box-shadow .15s}
+.fld input:focus{outline:0;border-color:#5aa7ee;box-shadow:0 0 0 3px var(--lb2);background:#fff}
+.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;font-size:1.05rem;padding:6px 8px;opacity:.6}
+.eye:hover{opacity:1}
+.lact{display:flex;gap:10px;margin:16px 0 14px}
+.lact .btn{flex:1;padding:11px 14px;border-radius:10px}
+.lact .btn:not(.alt){background:linear-gradient(135deg,var(--navy),#24509c)}
+.lact .btn:not(.alt):hover,.lact .btn:not(.alt):active{background:var(--lb);color:var(--navy)}
+.comp{background:#f4f8fd;border-top:1px solid #dbe6f5;padding:14px 24px;font-size:.78rem;color:var(--mut);line-height:1.45}
+.comp b{display:block;color:var(--navy);font-size:.8rem;margin-bottom:4px;letter-spacing:.03em}
+.comp ul{margin:0;padding-left:16px}.comp li{margin:2px 0}
+.lcred{text-align:center;padding:12px 16px;font-size:.78rem;color:var(--mut);border-top:1px solid #dbe6f5}
+.lcred strong{color:var(--navy)}
+.sfoot{text-align:center;color:var(--mut);font-size:.78rem;padding:6px 16px 22px}
+.sfoot strong{color:var(--navy)}
 .msg{padding:10px 12px;border-radius:6px;margin:12px 0;background:#fdf0ef;color:#8a1c16;border:1px solid #f0c6c3}
 .msg.ok{background:#eef7ee;color:#1f5a26;border-color:#c6e2c8}
 .hide{display:none!important}
@@ -83,12 +110,31 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 <div id="cfg" class="msg hide">Firebase is not connected yet. Open <code>index.html</code>, find <code>firebaseConfig</code> and paste your project settings.</div>
 
 <section id="vLogin" class="card login hide">
-  <h2>Sign in</h2>
-  <p class="mut">Staff only. New staff can request access, and an administrator will approve it.</p>
-  <label for="em">Email</label><input id="em" type="email" autocomplete="username">
-  <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
-  <div id="lmsg"></div>
-  <p><button id="bIn" class="btn">Sign in</button> <button id="bReq" class="btn alt">Request access</button></p>
+  <div class="lhead">
+    <img id="lcrest" alt="School crest">
+    <h2>Pentecost Preparatory School</h2>
+    <p>TARKWA &bull; EXTRA CLASSES COLLECTION</p>
+  </div>
+  <div class="lbody">
+    <h3>Welcome back</h3>
+    <p class="mut">Staff only. New staff can request access, and an administrator will approve it.</p>
+    <label for="em">Email</label>
+    <div class="fld"><span class="ic">&#9993;</span><input id="em" type="email" autocomplete="username" placeholder="you@example.com"></div>
+    <label for="pw">Password</label>
+    <div class="fld"><span class="ic">&#128274;</span><input id="pw" type="password" autocomplete="current-password" placeholder="Your password"><button type="button" id="eye" class="eye" aria-label="Show or hide password">&#128065;</button></div>
+    <div id="lmsg"></div>
+    <div class="lact"><button id="bIn" class="btn">Sign in</button><button id="bReq" class="btn alt">Request access</button></div>
+  </div>
+  <div class="comp">
+    <b>&#128737; COMPLIANCE &amp; ACCEPTABLE USE</b>
+    <ul>
+      <li>Access is limited to authorised school staff. Activity may be monitored.</li>
+      <li>Collection records and pupil information are confidential. Do not share or export them without approval.</li>
+      <li>Enter figures accurately and only for your own class. Never share your login details.</li>
+      <li>By signing in you agree to use this system only for official school purposes.</li>
+    </ul>
+  </div>
+  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; v1.0 &bull; &copy; 2026</div>
 </section>
 
 <section id="vPend" class="card login hide">
@@ -115,7 +161,13 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
   <div id="t-exp" class="hide"></div>
 </section>
 </main>
+<footer class="sfoot">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; &copy; 2026 Pentecost Preparatory School, Tarkwa. Confidential &ndash; authorised staff only.</footer>
 
+<script>
+(function(){var h=document.querySelector("header img"),c=document.getElementById("lcrest");if(h&&c)c.src=h.src;
+var e=document.getElementById("eye"),p=document.getElementById("pw");
+if(e&&p)e.onclick=function(){p.type=p.type==="password"?"text":"password"};})();
+</script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
