@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pentecost Preparatory School – Extra Classes Collection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--navy:#17356b;--red:#b3261e;--gold:#c9a227;--paper:#f8f7f3;--ink:#1d2433;--line:#d9d6cc;--mut:#667085}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "Source Sans 3",system-ui,sans-serif}
+h1,h2,h3{font-family:"Source Serif 4",Georgia,serif;margin:0}
+header{background:var(--navy);color:#fff;border-bottom:4px solid var(--gold)}
+.bar{max-width:1100px;margin:auto;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.bar img{height:56px;border-radius:6px;background:#fff;padding:2px}
+.bar h1{font-size:1.15rem;line-height:1.25}.bar small{opacity:.8}
+.sp{flex:1}
+main{max-width:1100px;margin:auto;padding:16px}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+nav button{background:none;border:0;padding:10px 16px;font:600 1rem inherit;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent}
+nav button.on{color:var(--navy);border-color:var(--red)}
+button,select,input{font:inherit}
+.btn{background:var(--navy);color:#fff;border:0;border-radius:6px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn.alt{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+.btn.red{background:var(--red)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+select,input{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff}
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+.total{font:700 2.4rem "Source Serif 4",Georgia,serif;color:var(--navy)}
+.split{display:flex;height:34px;border-radius:6px;overflow:hidden;margin:12px 0 8px;font-size:.85rem;font-weight:600;color:#fff}
+.split div{display:flex;align-items:center;justify-content:center;white-space:nowrap}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.legend b{display:block;font-size:1.2rem}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:700;color:var(--navy);background:#f0eee6}
+tfoot td{font-weight:700;border-top:2px solid var(--navy)}
+td input{width:70px;text-align:right;padding:6px}
+.days{display:flex;gap:10px;align-items:flex-end;height:110px;margin-top:8px}
+.days div{flex:1;text-align:center;font-size:.85rem}
+.days i{display:block;background:var(--gold);border-radius:4px 4px 0 0;min-height:2px}
+.login{max-width:380px;margin:40px auto}
+.login label{display:block;margin:10px 0 4px;font-weight:600}.login input{width:100%}
+.msg{padding:10px 12px;border-radius:6px;margin:12px 0;background:#fdf0ef;color:#8a1c16;border:1px solid #f0c6c3}
+.msg.ok{background:#eef7ee;color:#1f5a26;border-color:#c6e2c8}
+.hide{display:none!important}
+.mut{color:var(--mut);font-size:.9rem}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <img src="logo.jpg" alt="Pentecost Preparatory School crest" onerror="this.style.display='none'">
+  <div><h1>Pentecost Preparatory School – Tarkwa</h1><small>Extra Classes Collection</small></div>
+  <div class="sp"></div>
+  <span id="who" class="mut" style="color:#dfe6f5"></span>
+  <button id="out" class="btn alt hide">Sign out</button>
+</div></header>
+
+<main>
+<div id="cfg" class="msg hide">Firebase is not connected yet. Open <code>index.html</code>, find <code>firebaseConfig</code> and paste your project settings.</div>
+
+<section id="vLogin" class="card login hide">
+  <h2>Sign in</h2>
+  <p class="mut">Staff only. New staff can request access, and an administrator will approve it.</p>
+  <label for="em">Email</label><input id="em" type="email" autocomplete="username">
+  <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
+  <div id="lmsg"></div>
+  <p><button id="bIn" class="btn">Sign in</button> <button id="bReq" class="btn alt">Request access</button></p>
+</section>
+
+<section id="vPend" class="card login hide">
+  <h2>Waiting for approval</h2>
+  <p>Your account exists but has not been approved yet. Send this ID to the administrator:</p>
+  <p><code id="uid"></code></p>
+</section>
+
+<section id="vApp" class="hide">
+  <nav id="nav">
+    <button data-t="sum" class="on">Summary</button>
+    <button data-t="rec">Record</button>
+    <button data-t="tea">Teachers</button>
+    <button data-t="exp">Download</button>
+  </nav>
+  <div class="tools">
+    <label for="wk">Period</label><select id="wk"></select>
+    <button id="addWk" class="btn alt">Add week</button>
+    <button id="seed" class="btn alt hide">Import Oct–Nov data</button>
+  </div>
+  <div id="t-sum"></div>
+  <div id="t-rec" class="hide"></div>
+  <div id="t-tea" class="hide"></div>
+  <div id="t-exp" class="hide"></div>
+</section>
+</main>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,doc,getDoc,setDoc,collection,onSnapshot,writeBatch,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ===== 1. PASTE YOUR FIREBASE WEB APP SETTINGS HERE ===== */
+const firebaseConfig={
+  apiKey:"YOUR_API_KEY",
+  authDomain:"YOUR_PROJECT.firebaseapp.com",
+  projectId:"YOUR_PROJECT",
+  appId:"YOUR_APP_ID"
+};
+/* ========================================================= */
+
+/* ===== Sharing rules (change here only) ===== */
+const SHARE={school:.10,admin:.25,teachers:.65};
+const DAYS=["M","T","W","Th","F"], DN={M:"Mon",T:"Tue",W:"Wed",Th:"Thu",F:"Fri"};
+const B7=["Abdul Rahaman","Dennis Arkoh","Vivian Essoun","Grace Gyamfi","Priscilla Owusu","Aaron Mensah"];
+const B8=["Dennis Arkoh","Vivian Essoun","Grace Gyamfi","Priscilla Owusu","Aaron Mensah"];
+const B6DAY={M:"Abdul Rahaman",T:"Abdul Rahaman",W:"Aaron Mensah",Th:"Gracelove Afful",F:"Gracelove Afful"};
+/* First week each teacher took part. Earlier weeks are not shared with them. */
+const JOIN={"Patience":8,"Anita Onuoha":8};
+const CL=[
+ {id:"b8",name:"Basic 8"},{id:"b7",name:"Basic 7"},{id:"b6",name:"Basic 6"},
+ {id:"b5",name:"Basic 5",t:["Ignatius Hamilton"]},
+ {id:"b4a",name:"Basic 4a",t:["Patience"]},{id:"b4b",name:"Basic 4b",t:["Lawrence Agbeve"]},
+ {id:"b3",name:"Basic 3",t:["Constance Nutakor"]},
+ {id:"b2",name:"Basic 2",t:["Jessica Appiah","Anita Onuoha"]},
+ {id:"b1b",name:"Basic 1b",t:["Rita Guri"]},{id:"b1a",name:"Basic 1a",t:["Hagar Sackey"]}
+];
+const SEED={
+6:{b8:[45,45,45,42,36],b7:[42,36,45,42,35],b6:[40,40,30,0,0],b5:[60,52,50,50,52],b4b:[20,0,20,20,20],b3:[30,30,30,24,26],b2:[30,20,30,20,20],b1b:[30,30,30,30,30],b1a:[0,60,0,0,0]},
+7:{b8:[45,45,42,42,36],b7:[42,42,42,36,36],b6:[40,40,40,30,0],b5:[60,50,44,46,46],b4b:[20,20,20,20,20],b3:[26,26,30,24,26],b2:[30,20,0,30,30],b1b:[30,30,30,30,30],b1a:[0,110,16,20,10]},
+8:{b8:[45],b7:[45],b6:[40],b5:[60],b4a:[20],b4b:[20],b3:[24],b2:[30],b1b:[24],b1a:[0]}
+};
+
+const $=s=>document.querySelector(s);
+const fmt=n=>"GH₵ "+(+n||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const show=(id,on)=>$(id).classList.toggle("hide",!on);
+
+const ok=!firebaseConfig.apiKey.startsWith("YOUR_");
+let auth,db,role=null,user=null,R=new Map(),extra=new Set(),tab="sum",unsub=null;
+if(!ok){show("#cfg",true);show("#vLogin",true)}else{
+  const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
+  onAuthStateChanged(auth,async u=>{
+    user=u;if(unsub){unsub();unsub=null}
+    show("#out",!!u);$("#who").textContent=u?u.email:"";
+    if(!u){role=null;show("#vLogin",true);show("#vPend",false);show("#vApp",false);return}
+    show("#vLogin",false);
+    try{
+      const s=await getDoc(doc(db,"users",u.uid));
+      if(!s.exists()){$("#uid").textContent=u.uid;show("#vPend",true);show("#vApp",false);return}
+      role=s.data().role;show("#vPend",false);show("#vApp",true);show("#seed",role==="admin");
+      unsub=onSnapshot(collection(db,"records"),snap=>{R=new Map();snap.forEach(d=>R.set(d.id,d.data()));render()},e=>alert("Could not load data: "+e.message));
+    }catch(e){$("#uid").textContent=u.uid;show("#vPend",true);show("#vApp",false)}
+  });
+}
+
+/* ===== Login ===== */
+const lmsg=(t,good)=>$("#lmsg").innerHTML=t?`<div class="msg ${good?"ok":""}">${t}</div>`:"";
+const cred=()=>[$("#em").value.trim(),$("#pw").value];
+$("#bIn").onclick=async()=>{if(!ok)return;lmsg("");try{await signInWithEmailAndPassword(auth,...cred())}catch(e){lmsg("Sign-in failed. Check your email and password.")}};
+$("#bReq").onclick=async()=>{if(!ok)return;lmsg("");try{await createUserWithEmailAndPassword(auth,...cred())}catch(e){lmsg(e.code==="auth/weak-password"?"Use a password of at least 6 characters.":"Could not create the account: "+e.code)}};
+$("#out").onclick=()=>signOut(auth);
+
+/* ===== Calculations ===== */
+const amt=(w,c,d)=>+((R.get(`w${w}_${c}`)||{}).amounts?.[d])||0;
+const ctot=(w,c)=>DAYS.reduce((s,d)=>s+amt(w,c,d),0);
+const weeks=()=>[...new Set([...R.values()].map(r=>r.week).concat([...extra]))].sort((a,b)=>a-b);
+const sel=()=>{const v=+$("#wk").value;return v?[v]:weeks()};
+function calc(ws){
+  const t={},add=(n,v)=>t[n]=(t[n]||0)+v,P=SHARE.teachers;
+  const cls={},days=DAYS.map(()=>0);
+  CL.forEach(c=>cls[c.id]=0);
+  ws.forEach(w=>{
+    const bc={};
+    CL.forEach(c=>{bc[c.id]=ctot(w,c.id);cls[c.id]+=bc[c.id];if(c.t){const a=c.t.filter(n=>w>=(JOIN[n]||0));a.forEach(n=>add(n,bc[c.id]*P/a.length))}});
+    DAYS.forEach((d,i)=>{CL.forEach(c=>days[i]+=amt(w,c.id,d));add(B6DAY[d],amt(w,"b6",d)*P)});
+    const p=bc.b7*P/B7.length;B7.forEach(n=>add(n,p));          // Basic 7: equal portions
+    const q=bc.b8*P/B8.length;B8.forEach(n=>add(n,q+p));        // Basic 8: own share + Basic 7 portion
+  });
+  const total=Object.values(cls).reduce((a,b)=>a+b,0);
+  return{t,cls,days,total,school:total*SHARE.school,admin:total*SHARE.admin,teachers:total*SHARE.teachers};
+}
+
+/* ===== Rendering ===== */
+function render(){
+  const cur=$("#wk").value,ws=weeks();
+  $("#wk").innerHTML=`<option value="0">All weeks</option>`+ws.map(w=>`<option value="${w}">Week ${w}</option>`).join("");
+  $("#wk").value=ws.includes(+cur)?cur:"0";
+  show("#seed",role==="admin"&&R.size===0);
+  ({sum,rec,tea,exp}[tab])();
+}
+function sum(){
+  const c=calc(sel()),pc=x=>Math.round(x*100);
+  const max=Math.max(...c.days,1);
+  $("#t-sum").innerHTML=`
+  <div class="card"><div class="mut">Total collected</div><div class="total">${fmt(c.total)}</div>
+   <div class="split" role="img" aria-label="School ${pc(SHARE.school)}%, Administration ${pc(SHARE.admin)}%, Teachers ${pc(SHARE.teachers)}%">
+    <div style="flex:${SHARE.school};background:var(--gold);color:#1d2433">${pc(SHARE.school)}%</div>
+    <div style="flex:${SHARE.admin};background:var(--red)">${pc(SHARE.admin)}%</div>
+    <div style="flex:${SHARE.teachers};background:var(--navy)">${pc(SHARE.teachers)}%</div></div>
+   <div class="legend">
+    <div><span class="sw" style="background:var(--gold)"></span>School<b>${fmt(c.school)}</b></div>
+    <div><span class="sw" style="background:var(--red)"></span>Administration<b>${fmt(c.admin)}</b></div>
+    <div><span class="sw" style="background:var(--navy)"></span>Teachers<b>${fmt(c.teachers)}</b></div></div></div>
+  <div class="card"><h3>Collected by day</h3><div class="days">${c.days.map((v,i)=>`<div>${fmt(v).replace("GH₵ ","")}<i style="height:${v/max*80}px"></i>${DN[DAYS[i]]}</div>`).join("")}</div></div>
+  <div class="card tw"><h3>By class</h3><table><thead><tr><th>Class</th><th>Collected</th></tr></thead><tbody>
+   ${CL.map(k=>`<tr><td>${k.name}</td><td>${fmt(c.cls[k.id])}</td></tr>`).join("")}</tbody>
+   <tfoot><tr><td>Total</td><td>${fmt(c.total)}</td></tr></tfoot></table></div>`;
+}
+function rec(){
+  const w=+$("#wk").value||weeks().slice(-1)[0];
+  if(!w){$("#t-rec").innerHTML=`<div class="card">No weeks yet. Choose <b>Add week</b> to start recording.</div>`;return}
+  const can=role==="admin"||role==="recorder";
+  $("#t-rec").innerHTML=`<div class="card tw"><h3>Week ${w} collections</h3>
+   <p class="mut">${can?"Changes save automatically and appear on every signed-in device.":"You have view-only access."}</p>
+   <table><thead><tr><th>Class</th>${DAYS.map(d=>`<th>${DN[d]}</th>`).join("")}<th>Total</th></tr></thead><tbody>
+   ${CL.map(k=>`<tr data-c="${k.id}"><td>${k.name}</td>${DAYS.map(d=>`<td><input type="number" min="0" step="0.01" data-d="${d}" value="${amt(w,k.id,d)||""}" ${can?"":"disabled"} aria-label="${k.name} ${DN[d]}"></td>`).join("")}<td>${fmt(ctot(w,k.id))}</td></tr>`).join("")}
+   </tbody></table></div>`;
+  $("#t-rec").querySelectorAll("input").forEach(i=>i.onchange=async()=>{
+    const tr=i.closest("tr"),amounts={};
+    tr.querySelectorAll("input").forEach(x=>amounts[x.dataset.d]=Math.max(0,+x.value||0));
+    try{await setDoc(doc(db,"records",`w${w}_${tr.dataset.c}`),{week:w,cls:tr.dataset.c,amounts,updatedBy:user.email,updatedAt:serverTimestamp()})}
+    catch(e){alert("Could not save: "+e.message)}
+  });
+}
+function tea(){
+  const c=calc(sel()),rows=Object.entries(c.t).sort((a,b)=>b[1]-a[1]);
+  $("#t-tea").innerHTML=`<div class="card tw"><h3>Teacher amounts</h3><table><thead><tr><th>Teacher</th><th>Amount</th></tr></thead><tbody>
+   ${rows.map(([n,v])=>`<tr><td>${n}</td><td>${fmt(v)}</td></tr>`).join("")}</tbody>
+   <tfoot><tr><td>Total to teachers</td><td>${fmt(rows.reduce((s,r)=>s+r[1],0))}</td></tr></tfoot></table>
+   <p class="mut">Basic 6 is paid by collection day. Basic 7 is shared equally among its six teachers. Basic 8 teachers also receive the same portion as the Basic 7 teachers.</p></div>`;
+}
+function exp(){
+  $("#t-exp").innerHTML=`<div class="card"><h3>Download Excel</h3><p>Exports the period chosen above: collections, teacher amounts and the summary.</p><button id="dl" class="btn">Download Excel sheet</button></div>`;
+  $("#dl").onclick=()=>{
+    const ws=sel(),c=calc(ws),wb=XLSX.utils.book_new();
+    const a=[["Week","Class",...DAYS.map(d=>DN[d]),"Total"]];
+    ws.forEach(w=>CL.forEach(k=>a.push([w,k.name,...DAYS.map(d=>amt(w,k.id,d)),ctot(w,k.id)])));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),"Collections");
+    const t=[["Teacher","Amount (GH₵)"],...Object.entries(c.t).map(([n,v])=>[n,+v.toFixed(2)])];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t),"Teachers");
+    const s=[["Pentecost Preparatory School – Tarkwa"],["Period",$("#wk").value==="0"?"All weeks":"Week "+$("#wk").value],
+      ["Total collected",+c.total.toFixed(2)],["School 10%",+c.school.toFixed(2)],["Administration 25%",+c.admin.toFixed(2)],["Teachers 65%",+c.teachers.toFixed(2)]];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s),"Summary");
+    XLSX.writeFile(wb,"Extra_Classes_Collection.xlsx");
+  };
+}
+
+/* ===== Controls ===== */
+$("#nav").onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b));
+  ["sum","rec","tea","exp"].forEach(t=>show("#t-"+t,t===tab));render()};
+$("#wk").onchange=render;
+$("#addWk").onclick=()=>{const n=Math.max(0,...weeks())+1;extra.add(n);render();$("#wk").value=n;render()};
+$("#seed").onclick=async()=>{
+  if(!confirm("Import the Week 6–8 data from the Excel sheet?"))return;
+  const b=writeBatch(db);
+  for(const [w,rows] of Object.entries(SEED))for(const [c,v] of Object.entries(rows)){
+    const put=(id,arr)=>b.set(doc(db,"records",`w${w}_${id}`),{week:+w,cls:id,amounts:Object.fromEntries(DAYS.map((d,i)=>[d,arr[i]||0])),updatedBy:user.email,updatedAt:serverTimestamp()});
+    put(c,v);
+  }
+  await b.commit();
+};
+</script>
+</body>
+</html>
