@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: V.06 - admin-only Undo last disbursement; staff role enters pending values that count only after admin approval. History: V.01 stylish sign-in; V.02 crest centred; V.03 thin header/sign-out at bottom; V.04 Classes raw-amount page; V.05 days open + disbursement -->
+<!-- Version: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -127,6 +127,7 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
 .dis b{color:var(--navy);white-space:nowrap}
 .pend{background:#fff3c4!important;border-color:var(--gold)!important}
 .btn.pa,.btn.pr{padding:7px 10px;font-size:.8rem;border-radius:8px}
+.rqctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.rqctl select{max-width:150px;padding:7px 6px;border:1px solid #c5d3e8;border-radius:8px;background:#fff;font-size:.82rem}
 </style>
 </head>
 <body>
@@ -160,16 +161,22 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
       <li>By signing in you agree to use this system only for official school purposes.</li>
     </ul>
   </div>
-  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.06 &bull; &copy; 2026</div>
+  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.08 &bull; &copy; 2026</div>
 </section>
 
 <section id="vPend" class="card login hide">
   <h2>Waiting for approval</h2>
-  <p>Your account exists but has not been approved yet. Send this ID to the administrator:</p>
-  <p><code id="uid"></code></p>
+  <p id="rqState">Sending your request to the administrator&hellip;</p>
+  <p class="mut">You will be let in automatically as soon as the administrator allows you. You can keep this page open.</p>
+  <label for="rqName">Your name (optional, helps the administrator recognise you)</label>
+  <input id="rqName" type="text" maxlength="60" placeholder="e.g. Mr. Mensah, Basic 7">
+  <div class="lact"><button id="rqSend" class="btn">Send my name</button></div>
+  <p class="mut" style="font-size:.75rem">ID: <code id="uid"></code></p>
 </section>
 
 <section id="vApp" class="hide">
+  <div id="reqBox"></div>
+  <div id="dueBox"></div>
   <nav id="nav">
     <button data-t="cls" class="on">Classes</button>
     <button data-t="sum">Summary</button>
@@ -243,19 +250,31 @@ const fmt=n=>"GH₵ "+(+n||0).toLocaleString("en-GH",{minimumFractionDigits:2,ma
 const show=(id,on)=>$(id).classList.toggle("hide",!on);
 
 const ok=!firebaseConfig.apiKey.startsWith("YOUR_");
-let auth,db,role=null,user=null,R=new Map(),extra=new Set(),tab="cls",unsub=null,P=new Map(),unsubP=null;
+let auth,db,role=null,user=null,R=new Map(),extra=new Set(),tab="cls",unsub=null,P=new Map(),unsubP=null,Rq=new Map(),unsubR=null,unsubU=null,reqSig="",myCls="",myTeacher="",Us=new Map(),unsubUs=null;
 if(!ok){show("#cfg",true);show("#vLogin",true)}else{
   const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
   onAuthStateChanged(auth,async u=>{
-    user=u;if(unsub){unsub();unsub=null}if(unsubP){unsubP();unsubP=null}P=new Map();
+    user=u;if(unsub){unsub();unsub=null}if(unsubP){unsubP();unsubP=null}if(unsubR){unsubR();unsubR=null}if(unsubU){unsubU();unsubU=null}if(unsubUs){unsubUs();unsubUs=null}P=new Map();Rq=new Map();Us=new Map();reqSig="";myCls="";myTeacher="";
     show("#out",!!u);$("#who").textContent=u?u.email:"";
     if(!u){role=null;show("#vLogin",true);show("#vPend",false);show("#vApp",false);return}
     show("#vLogin",false);
     try{
       const s=await getDoc(doc(db,"users",u.uid));
-      if(!s.exists()){$("#uid").textContent=u.uid;show("#vPend",true);show("#vApp",false);return}
-      role=s.data().role;show("#vPend",false);show("#vApp",true);show("#seed",role==="admin");
-      unsub=onSnapshot(collection(db,"records"),snap=>{R=new Map();snap.forEach(d=>R.set(d.id,d.data()));render()},e=>alert("Could not load data: "+e.message));
+      if(!s.exists()){
+        $("#uid").textContent=u.uid;show("#vPend",true);show("#vApp",false);
+        askAccess(u);
+        unsubU=onSnapshot(doc(db,"users",u.uid),x=>{if(x.exists())location.reload()},()=>{});
+        return}
+      {const ud=s.data();role=ud.role;myCls=ud.cls||"";myTeacher=ud.teacher||""}show("#vPend",false);show("#vApp",true);show("#seed",role==="admin");
+      const lerr=e=>alert("Could not load data: "+e.message);
+      if(role==="staff"){
+        let A=new Map(),B=new Map();const set=()=>{R=new Map([...A,...B]);render()};
+        const u1=myCls?onSnapshot(query(collection(db,"records"),where("cls","==",myCls)),snap=>{A=new Map();snap.forEach(d=>A.set(d.id,d.data()));set()},lerr):()=>{};
+        const u2=onSnapshot(query(collection(db,"records"),where("meta","==",true)),snap=>{B=new Map();snap.forEach(d=>B.set(d.id,d.data()));set()},lerr);
+        unsub=()=>{u1();u2()};
+      }else unsub=onSnapshot(collection(db,"records"),snap=>{R=new Map();snap.forEach(d=>R.set(d.id,d.data()));render()},lerr);
+      if(role==="admin")unsubUs=onSnapshot(collection(db,"users"),snap=>{Us=new Map();snap.forEach(d=>Us.set(d.id,d.data()));reqSig="";render()},e=>console.warn("users",e.message));
+      if(role==="admin")unsubR=onSnapshot(collection(db,"requests"),snap=>{Rq=new Map();snap.forEach(d=>Rq.set(d.id,d.data()));render()},e=>console.warn("requests",e.message));
       if(role==="admin"||role==="staff")unsubP=onSnapshot(role==="admin"?collection(db,"pending"):query(collection(db,"pending"),where("uid","==",u.uid)),snap=>{P=new Map();snap.forEach(d=>P.set(d.id,d.data()));render()},e=>console.warn("pending",e.message));
     }catch(e){$("#uid").textContent=u.uid;show("#vPend",true);show("#vApp",false)}
   });
@@ -283,6 +302,11 @@ const wl=ws=>ws.length<2?"Week "+(ws[0]??""):(ws[ws.length-1]-ws[0]===ws.length-
 const dt=ms=>ms?new Date(ms).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"";
 const sel=()=>{const v=+$("#wk").value;return v>0?[v]:v<0?undis():weeks()};
 const curWeek=()=>{const v=+$("#wk").value;if(v>0)return v;const u=undis();return u.length?u[u.length-1]:weeks().slice(-1)[0]};
+const esc=t=>String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const CYCLE=4;   // weeks collected before each disbursement
+const TNAMES=[...new Set([...B7,...B8,...Object.values(B6DAY),...CL.flatMap(c=>c.t||[])])].sort();
+const VC=()=>role==="staff"?CL.filter(k=>k.id===myCls):CL;
+const cname=id=>(CL.find(k=>k.id===id)||{}).name||id||"";
 const pendList=()=>[...P.entries()].filter(([id,p])=>p.amounts&&Object.keys(p.amounts).length).sort((a,b)=>a[1].week-b[1].week||String(a[1].cls).localeCompare(String(b[1].cls)));
 const pendCount=()=>role==="admin"?pendList().length:0;
 const pamt=(w,c,d)=>{const p=user&&P.get(`p_w${w}_${c}_${user.uid}`),v=p&&p.amounts?p.amounts[d]:null;return v==null?null:+v};
@@ -308,6 +332,8 @@ function render(){
   $("#wk").innerHTML=`<option value="-1">Not yet disbursed</option><option value="0">All weeks</option>`+ws.map(w=>`<option value="${w}">Week ${w}${isDis(w)?" (disbursed)":""}</option>`).join("");
   $("#wk").value=(cur==="0"||ws.includes(+cur))?cur:"-1";
   show("#seed",role==="admin"&&R.size===0);
+  reqCard();dueCard();
+  {const st=role==="staff";["sum","tea","exp"].forEach(t=>{const b=document.querySelector(`#nav [data-t="${t}"]`);if(b)b.style.display=st?"none":""});const aw=$("#addWk");if(aw)aw.style.display=(role==="admin"||role==="recorder")?"":"none"}
   {const n=pendCount(),b=document.querySelector('#nav [data-t="rec"]');if(b)b.textContent="Record"+(n?` (${n})`:"")}
   ({cls,sum,rec,tea,exp}[tab])();
 }
@@ -326,18 +352,20 @@ function pivot(title,rows,get){
 }
 /* ===== Classes: raw cash collected per class (no sharing, no deductions) ===== */
 function cls(){
-  const ws=sel(),tot=k=>ws.reduce((s,w)=>s+ctot(w,k.id),0),grand=CL.reduce((s,k)=>s+tot(k),0);
-  const per=ws.map(w=>CL.reduce((s,k)=>s+ctot(w,k.id),0));
+  if(role==="staff"&&!myCls){$("#t-cls").innerHTML=`<div class="card">No class has been assigned to you yet. Please ask the administrator.</div>`;return}
+  const ws=sel(),tot=k=>ws.reduce((s,w)=>s+ctot(w,k.id),0),grand=VC().reduce((s,k)=>s+tot(k),0);
+  const per=ws.map(w=>VC().reduce((s,k)=>s+ctot(w,k.id),0));
   const label=ws.length===1?"Week "+ws[0]:ws.length?"Weeks "+ws[0]+" to "+ws[ws.length-1]+" ("+ws.length+" weeks)":"No weeks yet";
   $("#t-cls").innerHTML=`
   <div class="card"><div class="mut">Total amount collected &ndash; ${label}</div><div class="total">${fmt(grand)}</div>
    <p class="mut">Raw cash collected, exactly as recorded. No sharing or deductions. Days open: <b>${dayCount(ws)}</b></p></div>
-  <div class="card"><h3>Amount collected by class</h3>
-   <div class="crow">${CL.map(k=>`<div><span>${k.name}</span><b>${fmt(tot(k))}</b></div>`).join("")}
-   <div class="gt"><span>All classes</span><b>${fmt(grand)}</b></div></div></div>
+  ${role==="staff"?shareCard(ws):""}
+  <div class="card"><h3>${role==="staff"?"Your class":"Amount collected by class"}</h3>
+   <div class="crow">${VC().map(k=>`<div><span>${k.name}</span><b>${fmt(tot(k))}</b></div>`).join("")}
+   <div class="gt"><span>${role==="staff"?"Total":"All classes"}</span><b>${fmt(grand)}</b></div></div></div>
   <div class="card"><h3>Week by week</h3><div class="tw"><table class="raw"><thead><tr><th>Class</th>${ws.map(w=>`<th>Wk ${w}</th>`).join("")}<th>Total</th></tr></thead><tbody>
-   ${CL.map(k=>`<tr><td>${k.name}</td>${ws.map(w=>`<td>${n2(ctot(w,k.id))}</td>`).join("")}<td class="tt">${n2(tot(k))}</td></tr>`).join("")}</tbody>
-   <tfoot><tr><td>All classes</td>${per.map(v=>`<td>${n2(v)}</td>`).join("")}<td class="tt">${n2(grand)}</td></tr></tfoot></table></div></div>`;
+   ${VC().map(k=>`<tr><td>${k.name}</td>${ws.map(w=>`<td>${n2(ctot(w,k.id))}</td>`).join("")}<td class="tt">${n2(tot(k))}</td></tr>`).join("")}</tbody>
+   <tfoot><tr><td>${role==="staff"?"Total":"All classes"}</td>${per.map(v=>`<td>${n2(v)}</td>`).join("")}<td class="tt">${n2(grand)}</td></tr></tfoot></table></div></div>`;
 }
 function sum(){
   const c=calc(sel()),pc=x=>Math.round(x*100);
@@ -354,8 +382,104 @@ function sum(){
     <div><span class="sw" style="background:var(--red)"></span>Administration<b>${fmt(c.admin)}</b></div>
     <div><span class="sw" style="background:var(--navy)"></span>Teachers<b>${fmt(c.teachers)}</b></div></div></div>
   <div class="card"><h3>Collected by day</h3><div class="days">${c.days.map((v,i)=>`<div>${fmt(v).replace("GH₵ ","")}<i style="height:${v/max*80}px"></i>${DN[DAYS[i]]}</div>`).join("")}</div></div>
-  <div class="card"><h3>Class collections by week</h3>${pivot("Class",CL.map(k=>({id:k.id,n:k.name})),(id,w)=>ctot(w,id))}<p><b>Total: ${fmt(c.total)}</b></p></div>${disbCard()}`;
+  <div class="card"><h3>Class collections by week</h3>${pivot("Class",CL.map(k=>({id:k.id,n:k.name})),(id,w)=>ctot(w,id))}<p><b>Total: ${fmt(c.total)}</b></p></div>${disbCard()}${staffCard()}`;
+  bindStaff();
   const bd=$("#disb");if(bd)bd.onclick=disburse;const bu=$("#undo");if(bu)bu.onclick=undoDisb;
+}
+/* ===== Access requests: people who created an account and wait to be let in ===== */
+function askAccess(u,name){
+  const data={uid:u.uid,email:u.email,at:serverTimestamp()};if(name)data.name=name;
+  setDoc(doc(db,"requests",u.uid),data,{merge:true})
+    .then(()=>{$("#rqState").textContent=name?"Thank you. Your name was sent to the administrator.":"Your request has been sent to the administrator."})
+    .catch(()=>{$("#rqState").textContent="Could not send your request automatically. Please give the administrator your ID shown below."});
+}
+$("#rqSend").onclick=()=>{const n=$("#rqName").value.trim().slice(0,60);if(!n||!user)return;askAccess(user,n)};
+/* ===== Staff: the amount they are going to receive (from their own class only) ===== */
+function shareCard(ws){
+  const c=myCls,Pt=SHARE.teachers,n=myTeacher;let v=0,partial=false;
+  ws.forEach(w=>{
+    const t=ctot(w,c);
+    if(!n){v+=t*Pt;return}
+    if(c==="b6")DAYS.forEach(d=>{if(B6DAY[d]===n)v+=amt(w,"b6",d)*Pt});
+    else if(c==="b7"){if(B7.includes(n))v+=t*Pt/B7.length}
+    else if(c==="b8"){if(B8.includes(n)){v+=t*Pt/B8.length;partial=true}}
+    else{const a=((CL.find(k=>k.id===c)||{}).t||[]).filter(x=>w>=(JOIN[x]||0));if(a.includes(n))v+=t*Pt/a.length}
+  });
+  const lab=ws.length===1?"Week "+ws[0]:ws.length?"Weeks "+ws[0]+" to "+ws[ws.length-1]:"No weeks yet";
+  return `<div class="card" style="border-color:var(--gold)"><div class="mut">${n?"Amount you are going to receive":"Teachers&rsquo; portion for your class"} &ndash; ${lab}</div><div class="total">${fmt(v)}</div>
+   <p class="mut">${n?"Your share of the collections in your class, not yet disbursed.":"Your class teachers&rsquo; portion of the collections, not yet disbursed."}${partial?" Basic 8 teachers also receive a Basic 7 portion, which the administrator adds at disbursement.":""} The figure is paid at the next disbursement.</p></div>`;
+}
+/* ===== Disbursement due notice (after every CYCLE weeks, on the last open day of the last week) ===== */
+function dueInfo(){
+  const cy=undis();if(!cy.length)return null;
+  const tot=cy.reduce((s,w)=>s+wtot(w),0);if(tot<=0)return null;
+  const latest=cy[cy.length-1],od=openDays(latest),last=od[od.length-1];
+  const today=(new Date().getDay()+6)%7;                 // Mon=0 ... Sun=6
+  const lastDone=today>=DAYS.indexOf(last)||CL.some(k=>amt(latest,k.id,last)>0);
+  const due=cy.length>CYCLE||(cy.length===CYCLE&&lastDone);
+  return{due,weeks:cy,total:tot,last};
+}
+function dueCard(){
+  const box=$("#dueBox");if(!box)return;
+  const d=dueInfo();
+  if(!d||!d.due){box.innerHTML="";return}
+  const adm=role==="admin";
+  box.innerHTML=`<div class="card" style="margin:12px 12px 0;border:2px solid var(--red);background:#fff4f2"><b style="color:var(--red)">&#128276; Disbursement due</b>
+   <p style="margin:6px 0">${adm?`The amount collected in ${wl(d.weeks)} (${fmt(d.total)}) is due for sharing and disbursement.`:`The collections for ${wl(d.weeks)} are due for sharing. The administrator will disburse them soon.`}</p>
+   ${adm?`<button id="goDisb" class="btn">Go to Disbursement</button>`:""}</div>`;
+  const g=$("#goDisb");if(g)g.onclick=()=>{document.querySelector('#nav [data-t="sum"]').click();setTimeout(()=>{const x=$("#disb");if(x)x.scrollIntoView({behavior:"smooth",block:"center"})},60)};
+}
+const ROLES={staff:"Staff (needs approval)",recorder:"Recorder",viewer:"Viewer"};
+function reqCard(){
+  const box=$("#reqBox");if(!box)return;
+  const L=role==="admin"?[...Rq.values()].sort((a,b)=>(a.at&&a.at.toMillis?a.at.toMillis():0)-(b.at&&b.at.toMillis?b.at.toMillis():0)):[];
+  const sig=L.map(r=>r.uid+"|"+(r.name||"")).join(",");
+  if(sig===reqSig)return;reqSig=sig;
+  if(!L.length){box.innerHTML="";return}
+  const clsOpts='<option value="">Choose class&hellip;</option>'+CL.map(k=>`<option value="${k.id}">${k.name}</option>`).join("");
+  const teaOpts='<option value="">Teacher (for payout)&hellip;</option>'+TNAMES.map(n=>`<option>${esc(n)}</option>`).join("");
+  box.innerHTML=`<div class="card" style="border-color:var(--gold);margin:12px 12px 0"><h3>Access requests (${L.length})</h3>
+   <p class="mut">People waiting to be let in. Choose their role and, for staff, the class they will record. A staff member only sees their own class.</p>
+   ${L.map(r=>`<div class="dis" style="flex-wrap:wrap"><span><b>${esc(r.name||r.email)}</b><br><span class="mut">${esc(r.email)}${r.at&&r.at.toMillis?" &bull; "+dt(r.at.toMillis()):""}</span></span>
+    <span class="rqctl" data-u="${esc(r.uid)}"><select class="rr">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select>
+    <select class="rc">${clsOpts}</select><select class="rt">${teaOpts}</select>
+    <button class="btn rq-ok" data-id="${esc(r.uid)}">Allow</button><button class="btn alt rq-no" data-id="${esc(r.uid)}">Decline</button></span></div>`).join("")}</div>`;
+  box.querySelectorAll(".rqctl").forEach(g=>{const rr=g.querySelector(".rr"),rc=g.querySelector(".rc"),rt=g.querySelector(".rt");
+    const sync=()=>{rc.disabled=rt.disabled=rr.value!=="staff"};rr.onchange=sync;sync()});
+  box.querySelectorAll(".rq-ok").forEach(b=>b.onclick=()=>{const g=b.closest(".rqctl");allowUser(b.dataset.id,g.querySelector(".rr").value,g.querySelector(".rc").value,g.querySelector(".rt").value)});
+  box.querySelectorAll(".rq-no").forEach(b=>b.onclick=()=>declineUser(b.dataset.id));
+}
+async function allowUser(uid,r,c,t){
+  const q=Rq.get(uid);if(role!=="admin"||!q)return;
+  if(r==="staff"&&!c){alert("Choose the class this staff member will record.");return}
+  if(!confirm(`Allow ${q.name||q.email} as ${ROLES[r]||r}${r==="staff"?" for "+cname(c):""}?`))return;
+  try{
+    const b=writeBatch(db);
+    b.set(doc(db,"users",uid),{role:r,email:q.email,...(q.name?{name:q.name}:{}),...(r==="staff"?{cls:c,...(t?{teacher:t}:{})}:{}),approvedBy:user.email,approvedAt:serverTimestamp()});
+    b.delete(doc(db,"requests",uid));await b.commit();
+  }catch(e){alert("Could not save: "+e.message)}
+}
+async function declineUser(uid){
+  const q=Rq.get(uid);if(role!=="admin"||!q)return;
+  if(!confirm(`Decline the request from ${q.name||q.email}?`))return;
+  try{const b=writeBatch(db);b.delete(doc(db,"requests",uid));await b.commit()}catch(e){alert("Could not save: "+e.message)}
+}
+function staffCard(){
+  if(role!=="admin")return"";
+  const L=[...Us.entries()].filter(([id,u])=>u.role==="staff");
+  if(!L.length)return"";
+  const co=v=>'<option value="">Class&hellip;</option>'+CL.map(k=>`<option value="${k.id}" ${k.id===v?"selected":""}>${k.name}</option>`).join("");
+  const to=v=>'<option value="">Teacher&hellip;</option>'+TNAMES.map(n=>`<option ${n===v?"selected":""}>${esc(n)}</option>`).join("");
+  return `<div class="card"><h3>Staff accounts</h3><p class="mut">Each staff member sees only the class chosen here. Changes save as soon as you pick.</p>
+   ${L.map(([id,u])=>`<div class="dis" style="flex-wrap:wrap"><span><b>${esc(u.name||u.email||id)}</b><br><span class="mut">${esc(u.email||"")}</span></span>
+    <span class="rqctl" data-u="${esc(id)}"><select class="sc">${co(u.cls)}</select><select class="st">${to(u.teacher)}</select><button class="btn alt sx">Remove</button></span></div>`).join("")}</div>`;
+}
+function bindStaff(){
+  document.querySelectorAll("#t-sum .rqctl").forEach(g=>{const id=g.dataset.u;
+    const save=async()=>{try{await setDoc(doc(db,"users",id),{cls:g.querySelector(".sc").value,teacher:g.querySelector(".st").value},{merge:true})}catch(e){alert("Could not save: "+e.message)}};
+    g.querySelector(".sc").onchange=save;g.querySelector(".st").onchange=save;
+    g.querySelector(".sx").onclick=async()=>{if(!confirm("Remove this person's access? They will have to ask again."))return;try{const b=writeBatch(db);b.delete(doc(db,"users",id));await b.commit()}catch(e){alert("Could not save: "+e.message)}};
+  });
 }
 function disbCard(){
   const und=undis().filter(w=>wtot(w)>0),tot=und.reduce((s,w)=>s+wtot(w),0),bs={},pn=pendCount();
@@ -364,6 +488,7 @@ function disbCard(){
   const hist=keys.map((k,i)=>{const x=bs[k];return `<div class="dis"><span>${wl(x.w)}<br><span class="mut">${dt(x.at)}${x.by?" &bull; "+x.by:""}</span></span><b>${fmt(x.t)}</b></div>`+(i===0&&role==="admin"?`<button id="undo" class="btn alt" style="margin:8px 0 4px">Undo last disbursement</button>`:"")}).join("");
   return `<div class="card"><h3>Disbursement</h3><div class="mut">Collected, not yet disbursed</div><div class="total">${fmt(tot)}</div>
    <p class="mut">${und.length?wl(und):"Nothing waiting. A fresh week is ready."}</p>
+   <p class="mut">Cycle: ${Math.min(undis().length,CYCLE)} of ${CYCLE} weeks. A notice appears on the last open day of week ${CYCLE}.</p>
    ${pn?`<p class="mut" style="color:var(--red);font-weight:600">${pn} staff ${pn>1?"entries are":"entry is"} waiting for approval on the Record tab.</p>`:""}
    ${role==="admin"?`<button id="disb" class="btn" ${tot>0?"":"disabled"}>Confirm amount disbursed</button><p class="mut">This locks the weeks above and starts a fresh week. New collections are never added to money already disbursed.</p>`:`<p class="mut">Only the administrator can confirm disbursement.</p>`}
    ${hist?`<h3 style="margin-top:16px">Already disbursed</h3>${hist}`:""}</div>`;
@@ -424,6 +549,7 @@ function pendCard(){
 function rec(){
   const w=curWeek();
   if(!w){$("#t-rec").innerHTML=pendCard()+`<div class="card">No weeks yet. Choose <b>Add week</b> to start recording.</div>`;return}
+  if(role==="staff"&&!myCls){$("#t-rec").innerHTML=`<div class="card">No class has been assigned to you yet. Please ask the administrator.</div>`;return}
   const dis=isDis(w),m=META(w),adm=role==="admin",stf=role==="staff",can=(adm||role==="recorder"||stf)&&!dis,od=openDays(w);
   const note=dis?`Disbursed on ${dt(m.at)}. This week is locked.`:stf?"Your entries are saved as pending (yellow). They count in the totals only after the administrator approves them.":can?"Changes save automatically and appear on every signed-in device.":"You have view-only access.";
   $("#t-rec").innerHTML=pendCard()+`<div class="card"><h3>Week ${w} collections</h3>
@@ -432,7 +558,7 @@ function rec(){
    <div class="chips" id="dayChips">${DAYS.map(d=>`<button type="button" class="chip ${od.includes(d)?"on":""}" data-d="${d}" ${adm&&!dis?"":"disabled"}>${DN[d]}</button>`).join("")}</div>
    <p class="mut">${od.length} of ${DAYS.length} days open${adm&&!dis?". Tap a day to open or close it.":"."}</p>
    <table class="fit"><thead><tr><th>Class</th>${DAYS.map(d=>`<th>${DN[d]}</th>`).join("")}<th>Total</th></tr></thead><tbody>
-   ${CL.map(k=>`<tr data-c="${k.id}"><td>${k.name}</td>${DAYS.map(d=>{
+   ${VC().map(k=>`<tr data-c="${k.id}"><td>${k.name}</td>${DAYS.map(d=>{
       if(!od.includes(d))return `<td class="closed">Closed</td>`;
       const pv=stf?pamt(w,k.id,d):null,v=pv!=null?pv:amt(w,k.id,d);
       return `<td><input type="number" min="0" step="0.01" data-d="${d}" class="${pv!=null?"pend":""}" value="${v||""}" ${can?"":"disabled"} aria-label="${k.name} ${DN[d]}"></td>`}).join("")}<td>${num(ctot(w,k.id))}</td></tr>`).join("")}
