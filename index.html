@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: V.03 - sign-in top banner removed; app header thin text-only strip (no badge); email + light-blue Sign out moved to page bottom. History: V.01 stylish sign-in/compliance/STEMRidge Tech; V.02 crest centred -->
+<!-- Version: V.04 - new Classes page (raw cash collected per class, no dividends), now the first tab. History: V.01 stylish sign-in/compliance/STEMRidge Tech; V.02 crest centred; V.03 thin header, sign-out moved to bottom -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -106,6 +106,17 @@ body:has(#vLogin:not(.hide)) header{display:none}
 .sbox .who{font-weight:700;color:var(--navy);word-break:break-all;margin:2px 0 10px}
 .btn.sout{background:var(--lb);color:var(--navy);border:1px solid #8cc4f5;min-width:200px;padding:11px 20px;border-radius:10px}
 .btn.sout:hover,.btn.sout:active{background:#9fcdf7;color:var(--navy)}
+/* ===== V.04 ===== */
+nav button{font-size:.84rem;padding:10px 2px}
+.crow>div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.crow span{font-weight:600}.crow b{font-size:1.08rem;color:var(--navy)}
+.crow .gt{border-bottom:0;border-top:2px solid var(--navy);margin-top:4px;padding-top:12px}
+.crow .gt b{font-size:1.2rem}
+.raw{min-width:0}.raw th,.raw td{padding:8px 7px;font-size:.86rem}
+.raw td.tt{font-weight:700;color:var(--navy);background:var(--lb2)}
+.raw tfoot td{background:#f0eee6}
+.raw th:first-child,.raw td:first-child{position:sticky;left:0;background:#fff}
+.raw th:first-child,.raw tfoot td:first-child{background:#f0eee6}
 </style>
 </head>
 <body>
@@ -139,7 +150,7 @@ body:has(#vLogin:not(.hide)) header{display:none}
       <li>By signing in you agree to use this system only for official school purposes.</li>
     </ul>
   </div>
-  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.03 &bull; &copy; 2026</div>
+  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.04 &bull; &copy; 2026</div>
 </section>
 
 <section id="vPend" class="card login hide">
@@ -150,7 +161,8 @@ body:has(#vLogin:not(.hide)) header{display:none}
 
 <section id="vApp" class="hide">
   <nav id="nav">
-    <button data-t="sum" class="on">Summary</button>
+    <button data-t="cls" class="on">Classes</button>
+    <button data-t="sum">Summary</button>
     <button data-t="rec">Record</button>
     <button data-t="tea">Teachers</button>
     <button data-t="exp">Download</button>
@@ -160,7 +172,8 @@ body:has(#vLogin:not(.hide)) header{display:none}
     <button id="addWk" class="btn alt">Add week</button>
     <button id="seed" class="btn alt hide">Import Oct–Nov data</button>
   </div>
-  <div id="t-sum"></div>
+  <div id="t-cls"></div>
+  <div id="t-sum" class="hide"></div>
   <div id="t-rec" class="hide"></div>
   <div id="t-tea" class="hide"></div>
   <div id="t-exp" class="hide"></div>
@@ -217,7 +230,7 @@ const fmt=n=>"GH₵ "+(+n||0).toLocaleString("en-GH",{minimumFractionDigits:2,ma
 const show=(id,on)=>$(id).classList.toggle("hide",!on);
 
 const ok=!firebaseConfig.apiKey.startsWith("YOUR_");
-let auth,db,role=null,user=null,R=new Map(),extra=new Set(),tab="sum",unsub=null;
+let auth,db,role=null,user=null,R=new Map(),extra=new Set(),tab="cls",unsub=null;
 if(!ok){show("#cfg",true);show("#vLogin",true)}else{
   const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
   onAuthStateChanged(auth,async u=>{
@@ -267,7 +280,7 @@ function render(){
   $("#wk").innerHTML=`<option value="0">All weeks</option>`+ws.map(w=>`<option value="${w}">Week ${w}</option>`).join("");
   $("#wk").value=ws.includes(+cur)?cur:"0";
   show("#seed",role==="admin"&&R.size===0);
-  ({sum,rec,tea,exp}[tab])();
+  ({cls,sum,rec,tea,exp}[tab])();
 }
 const num=n=>fmt(n).replace("GH₵ ","");
 const n2=n=>Number.isInteger(n)?n.toLocaleString("en-GH"):(+n).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -281,6 +294,21 @@ function pivot(title,rows,get){
   ${d.map(x=>`<tr><td>${x.n}</td>${x.v.map((v,i)=>`<td class="b${band(cols[i],v)}">${n2(v)}</td>`).join("")}<td class="b${band(tots,x.t)}">${n2(x.t)}</td></tr>`).join("")}</tbody></table>
   <div class="lg"><span>Highest</span><i class="b0"></i><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i><span>Lowest</span></div>
   <p class="mut">Latest 3 weeks shown. Total covers the whole period chosen above.</p>`;
+}
+/* ===== Classes: raw cash collected per class (no sharing, no deductions) ===== */
+function cls(){
+  const ws=sel(),tot=k=>ws.reduce((s,w)=>s+ctot(w,k.id),0),grand=CL.reduce((s,k)=>s+tot(k),0);
+  const per=ws.map(w=>CL.reduce((s,k)=>s+ctot(w,k.id),0));
+  const label=ws.length===1?"Week "+ws[0]:ws.length?"Weeks "+ws[0]+" to "+ws[ws.length-1]+" ("+ws.length+" weeks)":"No weeks yet";
+  $("#t-cls").innerHTML=`
+  <div class="card"><div class="mut">Total amount collected &ndash; ${label}</div><div class="total">${fmt(grand)}</div>
+   <p class="mut">Raw cash collected, exactly as recorded. No sharing or deductions.</p></div>
+  <div class="card"><h3>Amount collected by class</h3>
+   <div class="crow">${CL.map(k=>`<div><span>${k.name}</span><b>${fmt(tot(k))}</b></div>`).join("")}
+   <div class="gt"><span>All classes</span><b>${fmt(grand)}</b></div></div></div>
+  <div class="card"><h3>Week by week</h3><div class="tw"><table class="raw"><thead><tr><th>Class</th>${ws.map(w=>`<th>Wk ${w}</th>`).join("")}<th>Total</th></tr></thead><tbody>
+   ${CL.map(k=>`<tr><td>${k.name}</td>${ws.map(w=>`<td>${n2(ctot(w,k.id))}</td>`).join("")}<td class="tt">${n2(tot(k))}</td></tr>`).join("")}</tbody>
+   <tfoot><tr><td>All classes</td>${per.map(v=>`<td>${n2(v)}</td>`).join("")}<td class="tt">${n2(grand)}</td></tr></tfoot></table></div></div>`;
 }
 function sum(){
   const c=calc(sel()),pc=x=>Math.round(x*100);
@@ -350,7 +378,7 @@ function exp(){
 /* ===== Controls ===== */
 $("#nav").onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.dataset.t;
   document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b));
-  ["sum","rec","tea","exp"].forEach(t=>show("#t-"+t,t===tab));render()};
+  ["cls","sum","rec","tea","exp"].forEach(t=>show("#t-"+t,t===tab));render()};
 $("#wk").onchange=render;
 $("#addWk").onclick=()=>{const n=Math.max(0,...weeks())+1;extra.add(n);render();$("#wk").value=n;render()};
 $("#seed").onclick=async()=>{
