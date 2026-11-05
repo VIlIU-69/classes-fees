@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: V.11 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
+<!-- Version: V.12 - teacher dashboard is one compact summary: choose From/To week, see the amount collected and the 10% / 25% / 65% split; staff Excel download now needs administrator approval (one download per approval, own class only). Previous: V.11 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -128,6 +128,7 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
 .pend{background:#fff3c4!important;border-color:var(--gold)!important}
 .btn.pa,.btn.pr{padding:7px 10px;font-size:.8rem;border-radius:8px}
 .rqctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.rqctl select{max-width:150px;padding:7px 6px;border:1px solid #c5d3e8;border-radius:8px;background:#fff;font-size:.82rem}
+.rng{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 12px}.rng label{display:flex;align-items:center;gap:6px;font-weight:600}
 </style>
 </head>
 <body>
@@ -161,7 +162,7 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
       <li>By signing in you agree to use this system only for official school purposes.</li>
     </ul>
   </div>
-  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.11 &bull; &copy; 2026</div>
+  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.12 &bull; &copy; 2026</div>
 </section>
 
 <section id="vPend" class="card login hide">
@@ -256,10 +257,11 @@ const show=(id,on)=>$(id).classList.toggle("hide",!on);
 
 const ok=!firebaseConfig.apiKey.startsWith("YOUR_");
 let auth,db,role=null,user=null,R=new Map(),D=new Map(),extra=new Set(),tab="cls",unsub=null,unsubD=null,P=new Map(),unsubP=null,Rq=new Map(),unsubR=null,unsubU=null,reqSig="",myCls="",myClasses=[],myTeacher="",Us=new Map(),unsubUs=null,migrationStarted=false;
+let unsubDL=null,DR=null,DRq=new Map();
 if(!ok){show("#cfg",true);show("#vLogin",true)}else{
   const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
   onAuthStateChanged(auth,async u=>{
-    user=u;if(unsub){unsub();unsub=null}if(unsubD){unsubD();unsubD=null}if(unsubP){unsubP();unsubP=null}if(unsubR){unsubR();unsubR=null}if(unsubU){unsubU();unsubU=null}if(unsubUs){unsubUs();unsubUs=null}P=new Map();D=new Map();Rq=new Map();Us=new Map();reqSig="";myCls="";myClasses=[];myTeacher="";migrationStarted=false;
+    user=u;if(unsubDL){unsubDL();unsubDL=null}DR=null;DRq=new Map();if(unsub){unsub();unsub=null}if(unsubD){unsubD();unsubD=null}if(unsubP){unsubP();unsubP=null}if(unsubR){unsubR();unsubR=null}if(unsubU){unsubU();unsubU=null}if(unsubUs){unsubUs();unsubUs=null}P=new Map();D=new Map();Rq=new Map();Us=new Map();reqSig="";myCls="";myClasses=[];myTeacher="";migrationStarted=false;
     show("#out",!!u);$("#who").textContent=u?u.email:"";
     if(!u){role=null;show("#vLogin",true);show("#vPend",false);show("#vApp",false);return}
     show("#vLogin",false);
@@ -304,6 +306,8 @@ if(!ok){show("#cfg",true);show("#vLogin",true)}else{
       if(role==="admin")unsubUs=onSnapshot(collection(db,"users"),snap=>{Us=new Map();snap.forEach(d=>Us.set(d.id,d.data()));reqSig="";render()},e=>console.warn("users",e.message));
       if(role==="admin")unsubR=onSnapshot(collection(db,"requests"),snap=>{Rq=new Map();snap.forEach(d=>Rq.set(d.id,d.data()));render()},e=>console.warn("requests",e.message));
       if(role==="admin"||role==="staff")unsubP=onSnapshot(role==="admin"?collection(db,"pending"):query(collection(db,"pending"),where("uid","==",u.uid)),snap=>{P=new Map();snap.forEach(d=>P.set(d.id,d.data()));render()},e=>console.warn("pending",e.message));
+      if(role==="staff")unsubDL=onSnapshot(doc(db,"downloadRequests",u.uid),x=>{DR=x.exists()?x.data():null;render()},e=>console.warn("downloads",e.message));
+      if(role==="admin")unsubDL=onSnapshot(collection(db,"downloadRequests"),snap=>{DRq=new Map();snap.forEach(d=>DRq.set(d.id,d.data()));render()},e=>console.warn("downloads",e.message));
     }catch(e){$("#uid").textContent=u.uid;show("#vPend",true);show("#vApp",false)}
   });
 }
@@ -410,8 +414,9 @@ function render(){
   $("#wk").value=(restricted?cur!=="0"&&(cur==="-1"||ws.includes(+cur)):(cur==="0"||ws.includes(+cur)))?cur:"-1";
   show("#seed",role==="admin"&&R.size===0);
   reqCard();dueCard();
-  {const st=role==="staff";["sum","tea","exp"].forEach(t=>{const b=document.querySelector(`#nav [data-t="${t}"]`);if(b)b.style.display=st?"none":""});const aw=$("#addWk");if(aw)aw.style.display=(role==="admin"||(role==="recorder"&&myClasses.length))?"":"none"}
+  {const st=role==="staff";["sum","tea","exp"].forEach(t=>{const b=document.querySelector(`#nav [data-t="${t}"]`);if(b)b.style.display=st&&t!=="exp"?"none":""});const aw=$("#addWk");if(aw)aw.style.display=(role==="admin"||(role==="recorder"&&myClasses.length))?"":"none"}
   {const n=pendCount(),b=document.querySelector('#nav [data-t="rec"]');if(b)b.textContent="Record"+(n?` (${n})`:"")}
+  {const tl=$("#wk").closest(".tools");if(tl)tl.style.display=(role==="staff"&&tab==="cls")?"none":""}
   ({cls,sum,rec,tea,exp}[tab])();
 }
 const num=n=>fmt(n).replace("GH₵ ","");
@@ -428,9 +433,52 @@ function pivot(title,rows,get){
   <p class="mut">Latest 3 weeks shown. Total covers the whole period chosen above.</p>`;
 }
 /* ===== Classes: raw cash collected per class (no sharing, no deductions) ===== */
+/* ===== Teacher dashboard: one compact summary for a chosen range of weeks ===== */
+/* The teacher's own amount from the class they can see (other classes are added by the administrator) */
+function myShare(ws){
+  const c=myCls,Pt=SHARE.teachers,n=myTeacher;let v=0;
+  ws.forEach(w=>{
+    const ec=(["b2a","b2b"].includes(c)&&w<=9)?"b2":c,t=ctot(w,ec);
+    if(c==="b6")DAYS.forEach(d=>{if(B6DAY[d]===n)v+=amt(w,"b6",d)*Pt});
+    else if(c==="b7"){if(B7.includes(n))v+=t*Pt/B7.length}
+    else if(c==="b8"){if(B8.includes(n))v+=t*Pt/B8.length}
+    else{const a=((CL.find(k=>k.id===ec)||{}).t||[]).filter(x=>w>=(JOIN[x]||0));if(a.includes(n))v+=t*Pt/a.length}
+  });
+  return roundMoney(v);
+}
+function myClassGroups(){
+  const n=myTeacher,g=new Set();
+  if(Object.values(B6DAY).includes(n))g.add("b6");if(B7.includes(n))g.add("b7");if(B8.includes(n))g.add("b8");
+  CL.forEach(k=>{if(k.t&&k.t.includes(n))g.add(k.id.startsWith("b2")?"b2":k.id)});
+  return g.size;
+}
+let sFrom=0,sTo=0;
+function clsStaff(){
+  const box=$("#t-cls"),all=weeks().filter(w=>w>=1);
+  if(!all.length){box.innerHTML=`<div class="card">No collections have been recorded yet.</div>`;return}
+  if(!all.includes(sFrom))sFrom=all[0];
+  if(!all.includes(sTo))sTo=all[all.length-1];
+  if(sFrom>sTo){const t=sFrom;sFrom=sTo;sTo=t}
+  const ws=all.filter(w=>w>=sFrom&&w<=sTo);
+  const total=roundMoney(ws.reduce((a,w)=>a+ctot(w,(["b2a","b2b"].includes(myCls)&&w<=9)?"b2":myCls),0));
+  const school=roundMoney(total*SHARE.school),admin=roundMoney(total*SHARE.admin),teachers=roundMoney(total*SHARE.teachers);
+  const opt=v=>all.map(w=>`<option value="${w}" ${w===v?"selected":""}>Week ${w}</option>`).join("");
+  const range=sFrom===sTo?`Week ${sFrom}`:`Week ${sFrom} to Week ${sTo}`;
+  const mine=myTeacher?`<div class="dis" style="margin-top:12px"><span>Your amount &ndash; ${esc(myTeacher)}</span><b>${fmt(myShare(ws))}</b></div>${myClassGroups()>1?`<p class="mut">This is your share from ${esc(cname(myCls))} only. Your share from your other classes is added by the administrator at disbursement.</p>`:""}`:`<p class="mut">Ask the administrator to set your teacher name to see your own amount.</p>`;
+  const pend=[...P.values()].filter(x=>x.cls===myCls&&x.amounts&&Object.keys(x.amounts).length).length;
+  box.innerHTML=`<div class="card" style="border-color:var(--gold)"><h3>Summary &ndash; ${esc(cname(myCls))}</h3>
+   <div class="rng"><label>From <select id="sFrom">${opt(sFrom)}</select></label><label>To <select id="sTo">${opt(sTo)}</select></label></div>
+   <div class="mut">${range} &bull; ${ws.length} week${ws.length===1?"":"s"}<br>Amount collected</div><div class="total">${fmt(total)}</div>
+   <div class="split" role="img" aria-label="School 10%, Administration 25%, Teachers 65%"><div style="flex:${SHARE.school};background:var(--gold);color:#1d2433">10%</div><div style="flex:${SHARE.admin};background:var(--red)">25%</div><div style="flex:${SHARE.teachers};background:var(--navy)">65%</div></div>
+   <div class="legend"><div><span class="sw" style="background:var(--gold)"></span>School 10%<b>${fmt(school)}</b></div><div><span class="sw" style="background:var(--red)"></span>Administration 25%<b>${fmt(admin)}</b></div><div><span class="sw" style="background:var(--navy)"></span>Teachers 65%<b>${fmt(teachers)}</b></div></div>
+   ${mine}<p class="mut">Approved figures for your class only.${pend?` ${pend} entr${pend===1?"y is":"ies are"} waiting for approval.`:""}</p></div>`;
+  $("#sFrom").onchange=e=>{sFrom=+e.target.value;clsStaff()};
+  $("#sTo").onchange=e=>{sTo=+e.target.value;clsStaff()};
+}
 function cls(){
   if(role==="staff"&&!myCls){$("#t-cls").innerHTML=`<div class="card">No class has been assigned to you yet. Please ask the administrator.</div>`;return}
   if(role==="recorder"&&!myClasses.length){$("#t-cls").innerHTML=`<div class="card">No classes have been assigned to your recorder account yet. Please ask the administrator.</div>`;return}
+  if(role==="staff"){clsStaff();return}
   const ws=sel(),staff=role==="staff",restricted=staff||role==="recorder",tot=k=>ws.reduce((s,w)=>s+ctot(w,k.id),0),grand=VC(ws).reduce((s,k)=>s+tot(k),0);
   const per=ws.map(w=>VC(ws).reduce((s,k)=>s+ctot(w,k.id),0));
   const label=restricted?(ws.length===0?"No weeks yet":ws.every(isDis)?(ws.length===1?`Week ${ws[0]} (disbursed)`:`Selected disbursed weeks`):ws.length===1?`Week ${ws[0]}`:"Current collection cycle (not yet disbursed)"):(ws.length===1?"Week "+ws[0]:ws.length?"Weeks "+ws[0]+" to "+ws[ws.length-1]+" ("+ws.length+" weeks)":"No weeks yet");
@@ -463,7 +511,7 @@ function sum(){
     <div><span class="sw" style="background:var(--red)"></span>Administration<b>${fmt(c.admin)}</b></div>
     <div><span class="sw" style="background:var(--navy)"></span>Teachers<b>${fmt(c.teachers)}</b></div></div></div>
   <div class="card"><h3>Collected by day</h3><div class="days">${c.days.map((v,i)=>`<div>${fmt(v).replace("GH₵ ","")}<i style="height:${v/max*80}px"></i>${DN[DAYS[i]]}</div>`).join("")}</div></div>
-  <div class="card"><h3>Class collections by week</h3>${pivot("Class",VC(sel()).map(k=>({id:k.id,n:k.name})),(id,w)=>ctot(w,id))}<p><b>Total: ${fmt(c.total)}</b></p></div>${disbCard()}${staffCard()}`;
+  <div class="card"><h3>Class collections by week</h3>${pivot("Class",VC(sel()).map(k=>({id:k.id,n:k.name})),(id,w)=>ctot(w,id))}<p><b>Total: ${fmt(c.total)}</b></p></div>${disbCard()}${dlCard()}${staffCard()}`;
   bindStaff();
   const bd=$("#disb");if(bd)bd.onclick=disburse;const bu=$("#undo");if(bu)bu.onclick=undoDisb;
 }
@@ -607,6 +655,7 @@ function staffCard(){
     <span class="rqctl" data-u="${esc(id)}">${u.role==="staff"?`<select class="sc">${co(u.cls)}</select><select class="st">${to(u.teacher,u.cls)}</select>`:`<select class="rsc" multiple size="3">${multi(u.classes||[])}</select>`}<button class="btn alt sx">Remove</button></span></div>`).join("")}</div>`;
 }
 function bindStaff(){
+  document.querySelectorAll("#t-sum .dl-ok,#t-sum .dl-no").forEach(b=>b.onclick=()=>decideDl(b.dataset.id,b.classList.contains("dl-ok")));
   document.querySelectorAll("#t-sum .rqctl").forEach(g=>{const id=g.dataset.u;
     const sc=g.querySelector(".sc"),st=g.querySelector(".st"),rsc=g.querySelector(".rsc");
     const save=async()=>{try{const patch=sc?{cls:sc.value,teacher:st.value}:{classes:[...rsc.selectedOptions].map(o=>o.value)};await setDoc(doc(db,"users",id),patch,{merge:true})}catch(e){alert("Could not save: "+e.message)}};
@@ -768,6 +817,7 @@ function tea(){
    <p class="mut">Basic 6 shows only the days that teacher collected. Basic 7 and 8 show the whole class total for each of their teachers, and a shared class (such as Basic 2 in Weeks 8 and 9) shows its full total for each teacher. Do not add these figures across teachers.</p></div>`;
 }
 function exp(){
+  if(role==="staff")return expStaff();
   $("#t-exp").innerHTML=`<div class="card"><h3>Download Excel</h3><p>Exports the period chosen above: collections, teacher amounts and the summary.</p><button id="dl" class="btn">Download Excel sheet</button></div>`;
   $("#dl").onclick=()=>{
     const ws=sel(),c=calc(ws),wb=XLSX.utils.book_new();
@@ -780,6 +830,44 @@ function exp(){
       ["Days open",dayCount(ws)],["Total collected",+c.total.toFixed(2)],["School 10%",+c.school.toFixed(2)],["Administration 25%",+c.admin.toFixed(2)],["Teachers 65%",+c.teachers.toFixed(2)]];
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s),"Summary");
     XLSX.writeFile(wb,"Extra_Classes_Collection.xlsx");
+  };
+}
+
+/* ===== Staff Excel download: needs the administrator's approval, one download per approval ===== */
+function dlCard(){
+  if(role!=="admin")return"";
+  const L=[...DRq.values()].filter(r=>r.status==="pending");
+  if(!L.length)return"";
+  const nm=r=>{const u=Us.get(r.uid)||{};return esc(u.name||u.email||r.email||r.uid)};
+  return `<div class="card" style="border-color:var(--gold)"><h3>Excel download requests (${L.length})</h3><p class="mut">A teacher can download only their own class, once for each approval.</p>
+   ${L.map(r=>`<div class="dis" style="flex-wrap:wrap"><span><b>${nm(r)}</b><br><span class="mut">${esc((CL.find(k=>k.id===r.cls)||{}).name||r.cls)} &bull; ${r.wk?"Week "+r.wk:"All weeks"}</span></span>
+   <span><button class="btn dl-ok" data-id="${esc(r.uid)}">Approve</button> <button class="btn alt dl-no" data-id="${esc(r.uid)}">Decline</button></span></div>`).join("")}</div>`;
+}
+async function decideDl(uid,ok){
+  if(role!=="admin")return;
+  try{await setDoc(doc(db,"downloadRequests",uid),{status:ok?"approved":"declined",decidedBy:user.email,decidedAt:serverTimestamp()},{merge:true})}
+  catch(e){alert("Could not save: "+e.message)}
+}
+function expStaff(){
+  const box=$("#t-exp");
+  if(!myCls){box.innerHTML=`<div class="card">No class has been assigned to you yet. Please ask the administrator.</div>`;return}
+  const st=DR&&DR.status,per=+$("#wk").value||0,lab=per?"Week "+per:"All weeks",dlab=DR&&(DR.wk?"Week "+DR.wk:"All weeks");
+  let body;
+  if(st==="pending")body=`<p>Your request for <b>${dlab}</b> is waiting for the administrator&rsquo;s approval. This page updates by itself once it is approved.</p>`;
+  else if(st==="approved")body=`<div class="msg ok">Approved for <b>${dlab}</b>. You can download one time.</div><p><button id="dl" class="btn">Download Excel sheet</button></p>`;
+  else body=`${st==="declined"?'<div class="msg">Your last request was declined.</div>':""}${st==="used"?'<p class="mut">Your last approved download has been used.</p>':""}<p>Downloading needs the administrator&rsquo;s approval. The file contains only the approved collections of your assigned class.</p><p><button id="rq" class="btn">Request download (${lab})</button></p>`;
+  box.innerHTML=`<div class="card"><h3>Download Excel</h3>${body}</div>`;
+  const rq=$("#rq");
+  if(rq)rq.onclick=async()=>{rq.disabled=true;try{await setDoc(doc(db,"downloadRequests",user.uid),{uid:user.uid,email:user.email,cls:myCls,wk:per,status:"pending",requestedAt:serverTimestamp()})}catch(e){alert("Could not send the request: "+e.message);rq.disabled=false}};
+  const dl=$("#dl");
+  if(dl)dl.onclick=async()=>{
+    dl.disabled=true;const wkReq=DR.wk;
+    try{await setDoc(doc(db,"downloadRequests",user.uid),{status:"used",usedAt:serverTimestamp()},{merge:true})}catch(e){alert("Could not start the download: "+e.message);dl.disabled=false;return}
+    const ws=wkReq?[wkReq]:weeks();
+    const a=[["Week","Class",...DAYS.map(d=>DN[d]),"Total","Status"]];
+    ws.forEach(w=>VC([w]).forEach(k=>a.push([w,k.name,...DAYS.map(d=>amt(w,k.id,d)),ctot(w,k.id),isDis(w)?"Disbursed":"Open"])));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),"My class");
+    XLSX.writeFile(wb,"My_Class_Collections.xlsx");
   };
 }
 
