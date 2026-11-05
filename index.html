@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
+<!-- Version: V.10 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -161,7 +161,7 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
       <li>By signing in you agree to use this system only for official school purposes.</li>
     </ul>
   </div>
-  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.08 &bull; &copy; 2026</div>
+  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.10 &bull; &copy; 2026</div>
 </section>
 
 <section id="vPend" class="card login hide">
@@ -230,19 +230,24 @@ const B7=["Abdul Rahaman","Dennis Arkoh","Vivian Essoun","Grace Gyamfi","Priscil
 const B8=["Dennis Arkoh","Vivian Essoun","Grace Gyamfi","Priscilla Owusu","Aaron Mensah"];
 const B6DAY={M:"Abdul Rahaman",T:"Abdul Rahaman",W:"Aaron Mensah",Th:"Gracelove Afful",F:"Gracelove Afful"};
 /* First week each teacher took part. Earlier weeks are not shared with them. */
-const JOIN={"Patience":8,"Anita Onuoha":8};
+const JOIN={"Patience Ocran":8,"Anita Sobeng":8};
 const CL=[
  {id:"b8",name:"Basic 8"},{id:"b7",name:"Basic 7"},{id:"b6",name:"Basic 6"},
  {id:"b5",name:"Basic 5",t:["Ignatius Hamilton"]},
- {id:"b4a",name:"Basic 4a",t:["Patience"]},{id:"b4b",name:"Basic 4b",t:["Lawrence Agbeve"]},
+ {id:"b4a",name:"Basic 4a",t:["Patience Ocran"]},{id:"b4b",name:"Basic 4b",t:["Lawrence Agbeve"]},
  {id:"b3",name:"Basic 3",t:["Constance Nutakor"]},
- {id:"b2",name:"Basic 2",t:["Jessica Appiah","Anita Onuoha"]},
+ {id:"b2a",name:"Basic 2a",t:["Anita Sobeng"],from:10},{id:"b2b",name:"Basic 2b",t:["Jessica Appiah"],from:10},
+ {id:"b2",name:"Basic 2 (to Wk 9)",t:["Jessica Appiah","Anita Sobeng"],to:9},
  {id:"b1b",name:"Basic 1b",t:["Rita Guri"]},{id:"b1a",name:"Basic 1a",t:["Hagar Sackey"]}
 ];
+/* A class can be limited to certain weeks: from = first week, to = last week */
+const inW=(k,w)=>(!k.from||w>=k.from)&&(!k.to||w<=k.to);
+const CLW=ws=>CL.filter(k=>ws.some(w=>inW(k,w)));
 const SEED={
 6:{b8:[45,45,45,42,36],b7:[42,36,45,42,35],b6:[40,40,30,0,0],b5:[60,52,50,50,52],b4b:[20,0,20,20,20],b3:[30,30,30,24,26],b2:[30,20,30,20,20],b1b:[30,30,30,30,30],b1a:[0,60,0,0,0]},
 7:{b8:[45,45,42,42,36],b7:[42,42,42,36,36],b6:[40,40,40,30,0],b5:[60,50,44,46,46],b4b:[20,20,20,20,20],b3:[26,26,30,24,26],b2:[30,20,0,30,30],b1b:[30,30,30,30,30],b1a:[0,110,16,20,10]},
-8:{b8:[45],b7:[45],b6:[40],b5:[60],b4a:[20],b4b:[20],b3:[24],b2:[30],b1b:[24],b1a:[0]}
+8:{b8:[45,45,45,45,0],b7:[45,45,45,40,0],b6:[40,40,30,0,0],b5:[60,50,42,46,0],b4a:[20,20,24,42,0],b4b:[20,20,20,20,0],b3:[24,26,24,26,0],b2:[30,34,30,24,0],b1b:[24,26,26,25,0],b1a:[50,24,20,0,0]},
+9:{b8:[45,32],b7:[45,42],b6:[40,40],b5:[64,52],b4a:[42,40],b4b:[20,20],b3:[30,24],b2:[40,32],b1b:[24,30],b1a:[42,20]}
 };
 
 const $=s=>document.querySelector(s);
@@ -305,7 +310,7 @@ const curWeek=()=>{const v=+$("#wk").value;if(v>0)return v;const u=undis();retur
 const esc=t=>String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CYCLE=4;   // weeks collected before each disbursement
 const TNAMES=[...new Set([...B7,...B8,...Object.values(B6DAY),...CL.flatMap(c=>c.t||[])])].sort();
-const VC=()=>role==="staff"?CL.filter(k=>k.id===myCls):CL;
+const VC=ws=>{const a=ws?CLW(ws):CL;return role==="staff"?a.filter(k=>k.id===myCls):a};
 const cname=id=>(CL.find(k=>k.id===id)||{}).name||id||"";
 const pendList=()=>[...P.entries()].filter(([id,p])=>p.amounts&&Object.keys(p.amounts).length).sort((a,b)=>a[1].week-b[1].week||String(a[1].cls).localeCompare(String(b[1].cls)));
 const pendCount=()=>role==="admin"?pendList().length:0;
@@ -319,8 +324,11 @@ function calc(ws){
     const bc={};
     CL.forEach(c=>{bc[c.id]=ctot(w,c.id);cls[c.id]+=bc[c.id];if(c.t){const a=c.t.filter(n=>w>=(JOIN[n]||0));a.forEach(n=>add(n,bc[c.id]*P/a.length))}});
     DAYS.forEach((d,i)=>{CL.forEach(c=>days[i]+=amt(w,c.id,d));add(B6DAY[d],amt(w,"b6",d)*P)});
-    const p=bc.b7*P/B7.length;B7.forEach(n=>add(n,p));          // Basic 7: equal portions
-    const q=bc.b8*P/B8.length;B8.forEach(n=>add(n,q+p));        // Basic 8: own share + Basic 7 portion
+    const pool7=bc.b7*P,portion=pool7/B7.length;                 // Abdul Rahaman: one portion of the Basic 7 pool
+    add("Abdul Rahaman",portion);
+    const rest=B7.filter(n=>n!=="Abdul Rahaman");                // the rest of the pool is shared equally by the others
+    rest.forEach(n=>add(n,(pool7-portion)/rest.length));
+    const q=bc.b8*P/B8.length;B8.forEach(n=>add(n,q));           // Basic 8 share (their Basic 7 share is already counted above)
   });
   const total=Object.values(cls).reduce((a,b)=>a+b,0);
   return{t,cls,days,total,school:total*SHARE.school,admin:total*SHARE.admin,teachers:total*SHARE.teachers};
@@ -353,18 +361,18 @@ function pivot(title,rows,get){
 /* ===== Classes: raw cash collected per class (no sharing, no deductions) ===== */
 function cls(){
   if(role==="staff"&&!myCls){$("#t-cls").innerHTML=`<div class="card">No class has been assigned to you yet. Please ask the administrator.</div>`;return}
-  const ws=sel(),tot=k=>ws.reduce((s,w)=>s+ctot(w,k.id),0),grand=VC().reduce((s,k)=>s+tot(k),0);
-  const per=ws.map(w=>VC().reduce((s,k)=>s+ctot(w,k.id),0));
+  const ws=sel(),tot=k=>ws.reduce((s,w)=>s+ctot(w,k.id),0),grand=VC(ws).reduce((s,k)=>s+tot(k),0);
+  const per=ws.map(w=>VC(ws).reduce((s,k)=>s+ctot(w,k.id),0));
   const label=ws.length===1?"Week "+ws[0]:ws.length?"Weeks "+ws[0]+" to "+ws[ws.length-1]+" ("+ws.length+" weeks)":"No weeks yet";
   $("#t-cls").innerHTML=`
   <div class="card"><div class="mut">Total amount collected &ndash; ${label}</div><div class="total">${fmt(grand)}</div>
    <p class="mut">Raw cash collected, exactly as recorded. No sharing or deductions. Days open: <b>${dayCount(ws)}</b></p></div>
   ${role==="staff"?shareCard(ws):""}
   <div class="card"><h3>${role==="staff"?"Your class":"Amount collected by class"}</h3>
-   <div class="crow">${VC().map(k=>`<div><span>${k.name}</span><b>${fmt(tot(k))}</b></div>`).join("")}
+   <div class="crow">${VC(ws).map(k=>`<div><span>${k.name}</span><b>${fmt(tot(k))}</b></div>`).join("")}
    <div class="gt"><span>${role==="staff"?"Total":"All classes"}</span><b>${fmt(grand)}</b></div></div></div>
   <div class="card"><h3>Week by week</h3><div class="tw"><table class="raw"><thead><tr><th>Class</th>${ws.map(w=>`<th>Wk ${w}</th>`).join("")}<th>Total</th></tr></thead><tbody>
-   ${VC().map(k=>`<tr><td>${k.name}</td>${ws.map(w=>`<td>${n2(ctot(w,k.id))}</td>`).join("")}<td class="tt">${n2(tot(k))}</td></tr>`).join("")}</tbody>
+   ${VC(ws).map(k=>`<tr><td>${k.name}</td>${ws.map(w=>`<td>${n2(ctot(w,k.id))}</td>`).join("")}<td class="tt">${n2(tot(k))}</td></tr>`).join("")}</tbody>
    <tfoot><tr><td>${role==="staff"?"Total":"All classes"}</td>${per.map(v=>`<td>${n2(v)}</td>`).join("")}<td class="tt">${n2(grand)}</td></tr></tfoot></table></div></div>`;
 }
 function sum(){
@@ -382,7 +390,7 @@ function sum(){
     <div><span class="sw" style="background:var(--red)"></span>Administration<b>${fmt(c.admin)}</b></div>
     <div><span class="sw" style="background:var(--navy)"></span>Teachers<b>${fmt(c.teachers)}</b></div></div></div>
   <div class="card"><h3>Collected by day</h3><div class="days">${c.days.map((v,i)=>`<div>${fmt(v).replace("GH₵ ","")}<i style="height:${v/max*80}px"></i>${DN[DAYS[i]]}</div>`).join("")}</div></div>
-  <div class="card"><h3>Class collections by week</h3>${pivot("Class",CL.map(k=>({id:k.id,n:k.name})),(id,w)=>ctot(w,id))}<p><b>Total: ${fmt(c.total)}</b></p></div>${disbCard()}${staffCard()}`;
+  <div class="card"><h3>Class collections by week</h3>${pivot("Class",CLW(sel()).map(k=>({id:k.id,n:k.name})),(id,w)=>ctot(w,id))}<p><b>Total: ${fmt(c.total)}</b></p></div>${disbCard()}${staffCard()}`;
   bindStaff();
   const bd=$("#disb");if(bd)bd.onclick=disburse;const bu=$("#undo");if(bu)bu.onclick=undoDisb;
 }
@@ -558,7 +566,7 @@ function rec(){
    <div class="chips" id="dayChips">${DAYS.map(d=>`<button type="button" class="chip ${od.includes(d)?"on":""}" data-d="${d}" ${adm&&!dis?"":"disabled"}>${DN[d]}</button>`).join("")}</div>
    <p class="mut">${od.length} of ${DAYS.length} days open${adm&&!dis?". Tap a day to open or close it.":"."}</p>
    <table class="fit"><thead><tr><th>Class</th>${DAYS.map(d=>`<th>${DN[d]}</th>`).join("")}<th>Total</th></tr></thead><tbody>
-   ${VC().map(k=>`<tr data-c="${k.id}"><td>${k.name}</td>${DAYS.map(d=>{
+   ${VC([w]).map(k=>`<tr data-c="${k.id}"><td>${k.name}</td>${DAYS.map(d=>{
       if(!od.includes(d))return `<td class="closed">Closed</td>`;
       const pv=stf?pamt(w,k.id,d):null,v=pv!=null?pv:amt(w,k.id,d);
       return `<td><input type="number" min="0" step="0.01" data-d="${d}" class="${pv!=null?"pend":""}" value="${v||""}" ${can?"":"disabled"} aria-label="${k.name} ${DN[d]}"></td>`}).join("")}<td>${num(ctot(w,k.id))}</td></tr>`).join("")}
@@ -601,16 +609,17 @@ function tea(){
   const c=calc(ws),names=Object.keys(c.t);
   $("#t-tea").innerHTML=`<div class="card"><h3>Teacher amounts by week</h3>${pivot("Teacher",names.map(n=>({id:n,n})),(id,w)=>cw[w][id]||0)}
    <p><b>Total to teachers: ${fmt(c.teachers)}</b></p>
-   <p class="mut">Basic 6 is paid by collection day. Basic 7 is shared equally among its six teachers. Basic 8 teachers also receive the same portion as the Basic 7 teachers.</p></div>
+   ${Math.abs(Object.values(c.t).reduce((a,b)=>a+b,0)-c.teachers)<0.005?`<div class="msg ok">Check passed: the amounts above add up exactly to the 65% teacher share.</div>`:`<div class="msg">Check failed: teacher amounts (${fmt(Object.values(c.t).reduce((a,b)=>a+b,0))}) do not match the 65% teacher share (${fmt(c.teachers)}).</div>`}
+   <p class="mut">Basic 6 is paid by collection day. In Basic 7, Abdul Rahaman takes one portion and the rest is shared equally by the other five teachers. Basic 8 teachers get their Basic 8 share plus their Basic 7 share, counted once.</p></div>
   <div class="card"><h3>Cash collected in own classes</h3>${pivot("Teacher",names.map(n=>({id:n,n})),(id,w)=>cs[w][id]||0)}
-   <p class="mut">Basic 6 shows only the days that teacher collected. Basic 7 and 8 show the whole class total for each of their teachers, and a shared class (such as Basic 2 from Week 8) shows its full total for each teacher. Do not add these figures across teachers.</p></div>`;
+   <p class="mut">Basic 6 shows only the days that teacher collected. Basic 7 and 8 show the whole class total for each of their teachers, and a shared class (such as Basic 2 in Weeks 8 and 9) shows its full total for each teacher. Do not add these figures across teachers.</p></div>`;
 }
 function exp(){
   $("#t-exp").innerHTML=`<div class="card"><h3>Download Excel</h3><p>Exports the period chosen above: collections, teacher amounts and the summary.</p><button id="dl" class="btn">Download Excel sheet</button></div>`;
   $("#dl").onclick=()=>{
     const ws=sel(),c=calc(ws),wb=XLSX.utils.book_new();
     const a=[["Week","Class",...DAYS.map(d=>DN[d]),"Total"]];
-    ws.forEach(w=>CL.forEach(k=>a.push([w,k.name,...DAYS.map(d=>amt(w,k.id,d)),ctot(w,k.id)])));
+    ws.forEach(w=>CL.filter(k=>inW(k,w)).forEach(k=>a.push([w,k.name,...DAYS.map(d=>amt(w,k.id,d)),ctot(w,k.id)])));
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),"Collections");
     const t=[["Teacher","Amount (GH₵)"],...Object.entries(c.t).map(([n,v])=>[n,+v.toFixed(2)])];
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t),"Teachers");
@@ -640,7 +649,7 @@ $("#mkWk").onclick=async()=>{
   extra.add(n);show("#addBox",false);render();$("#wk").value=n;render();
 };
 $("#seed").onclick=async()=>{
-  if(!confirm("Import the Week 6–8 data from the Excel sheet?"))return;
+  if(!confirm("Import the Week 6–9 data from the Excel sheet?"))return;
   const b=writeBatch(db);
   for(const [w,rows] of Object.entries(SEED))for(const [c,v] of Object.entries(rows)){
     const put=(id,arr)=>b.set(doc(db,"records",`w${w}_${id}`),{week:+w,cls:id,amounts:Object.fromEntries(DAYS.map((d,i)=>[d,arr[i]||0])),updatedBy:user.email,updatedAt:serverTimestamp()});
