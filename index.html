@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: V.10 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
+<!-- Version: V.11 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -161,7 +161,7 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
       <li>By signing in you agree to use this system only for official school purposes.</li>
     </ul>
   </div>
-  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.10 &bull; &copy; 2026</div>
+  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.11 &bull; &copy; 2026</div>
 </section>
 
 <section id="vPend" class="card login hide">
@@ -210,7 +210,7 @@ if(e&&p)e.onclick=function(){p.type=p.type==="password"?"text":"password"};})();
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,collection,onSnapshot,writeBatch,serverTimestamp,deleteField,query,where} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,doc,getDoc,getDocs,setDoc,collection,onSnapshot,writeBatch,serverTimestamp,deleteField,query,where} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ===== 1. PASTE YOUR FIREBASE WEB APP SETTINGS HERE ===== */
 const firebaseConfig={
@@ -255,11 +255,11 @@ const fmt=n=>"GH₵ "+(+n||0).toLocaleString("en-GH",{minimumFractionDigits:2,ma
 const show=(id,on)=>$(id).classList.toggle("hide",!on);
 
 const ok=!firebaseConfig.apiKey.startsWith("YOUR_");
-let auth,db,role=null,user=null,R=new Map(),extra=new Set(),tab="cls",unsub=null,P=new Map(),unsubP=null,Rq=new Map(),unsubR=null,unsubU=null,reqSig="",myCls="",myTeacher="",Us=new Map(),unsubUs=null;
+let auth,db,role=null,user=null,R=new Map(),D=new Map(),extra=new Set(),tab="cls",unsub=null,unsubD=null,P=new Map(),unsubP=null,Rq=new Map(),unsubR=null,unsubU=null,reqSig="",myCls="",myClasses=[],myTeacher="",Us=new Map(),unsubUs=null,migrationStarted=false;
 if(!ok){show("#cfg",true);show("#vLogin",true)}else{
   const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
   onAuthStateChanged(auth,async u=>{
-    user=u;if(unsub){unsub();unsub=null}if(unsubP){unsubP();unsubP=null}if(unsubR){unsubR();unsubR=null}if(unsubU){unsubU();unsubU=null}if(unsubUs){unsubUs();unsubUs=null}P=new Map();Rq=new Map();Us=new Map();reqSig="";myCls="";myTeacher="";
+    user=u;if(unsub){unsub();unsub=null}if(unsubD){unsubD();unsubD=null}if(unsubP){unsubP();unsubP=null}if(unsubR){unsubR();unsubR=null}if(unsubU){unsubU();unsubU=null}if(unsubUs){unsubUs();unsubUs=null}P=new Map();D=new Map();Rq=new Map();Us=new Map();reqSig="";myCls="";myClasses=[];myTeacher="";migrationStarted=false;
     show("#out",!!u);$("#who").textContent=u?u.email:"";
     if(!u){role=null;show("#vLogin",true);show("#vPend",false);show("#vApp",false);return}
     show("#vLogin",false);
@@ -270,14 +270,37 @@ if(!ok){show("#cfg",true);show("#vLogin",true)}else{
         askAccess(u);
         unsubU=onSnapshot(doc(db,"users",u.uid),x=>{if(x.exists())location.reload()},()=>{});
         return}
-      {const ud=s.data();role=ud.role;myCls=ud.cls||"";myTeacher=ud.teacher||""}show("#vPend",false);show("#vApp",true);show("#seed",role==="admin");
+      {const ud=s.data();role=ud.role;myCls=ud.cls||"";myClasses=Array.isArray(ud.classes)?ud.classes:[];myTeacher=ud.teacher||""}show("#vPend",false);show("#vApp",true);show("#seed",role==="admin");
       const lerr=e=>alert("Could not load data: "+e.message);
-      if(role==="staff"){
-        let A=new Map(),B=new Map();const set=()=>{R=new Map([...A,...B]);render()};
-        const u1=myCls?onSnapshot(query(collection(db,"records"),where("cls","==",myCls)),snap=>{A=new Map();snap.forEach(d=>A.set(d.id,d.data()));set()},lerr):()=>{};
-        const u2=onSnapshot(query(collection(db,"records"),where("meta","==",true)),snap=>{B=new Map();snap.forEach(d=>B.set(d.id,d.data()));set()},lerr);
-        unsub=()=>{u1();u2()};
-      }else unsub=onSnapshot(collection(db,"records"),snap=>{R=new Map();snap.forEach(d=>R.set(d.id,d.data()));render()},lerr);
+      if(role==="staff"||role==="recorder"){
+        let A=new Map(),Alegacy=new Map(),B=new Map();
+        const assigned=role==="staff"?(myCls?[myCls]:[]):myClasses;
+        const set=()=>{
+          R=new Map([...A,...Alegacy]);
+          B.forEach(v=>R.set(`meta_w${v.week}`,{...v,meta:true}));
+          render();
+        };
+        const classQuery=assigned.length
+          ?query(collection(db,"records"),role==="staff"?where("cls","==",myCls):where("cls","in",assigned))
+          :null;
+        const u1=classQuery?onSnapshot(classQuery,snap=>{A=new Map();snap.forEach(d=>A.set(d.id,d.data()));set()},lerr):()=>{};
+        // Basic 2 was one shared class through Week 9. Basic 2A and 2B
+        // teachers retain read-only historical access to that combined row.
+        const legacyB2Query=role==="staff"&&["b2a","b2b"].includes(myCls)
+          ?query(collection(db,"records"),where("cls","==","b2"),where("week","<=",9)):null;
+        const uLegacy=legacyB2Query?onSnapshot(legacyB2Query,snap=>{Alegacy=new Map();snap.forEach(d=>Alegacy.set(d.id,d.data()));set()},lerr):()=>{};
+        // Safe week settings contain no whole-school collection totals.
+        const u2=onSnapshot(collection(db,"weekSettings"),snap=>{B=new Map();snap.forEach(d=>B.set(d.id,d.data()));set()},lerr);
+        // Teachers and recorders receive snapshots only for their permitted class(es).
+        const disbQuery=assigned.length?query(collection(db,"classDisbursements"),role==="staff"?where("cls","==",myCls):where("cls","in",assigned)):null;
+        let Dassigned=new Map(),Dlegacy=new Map();
+        const setDisb=()=>{D=new Map([...Dassigned,...Dlegacy]);render()};
+        const u3=disbQuery?onSnapshot(disbQuery,snap=>{Dassigned=new Map();snap.forEach(d=>Dassigned.set(d.id,d.data()));setDisb()},lerr):()=>{};
+        const legacyDisbQuery=role==="staff"&&["b2a","b2b"].includes(myCls)
+          ?query(collection(db,"classDisbursements"),where("cls","==","b2"),where("week","<=",9)):null;
+        const uDisbLegacy=legacyDisbQuery?onSnapshot(legacyDisbQuery,snap=>{Dlegacy=new Map();snap.forEach(d=>Dlegacy.set(d.id,d.data()));setDisb()},lerr):()=>{};
+        unsub=()=>{u1();uLegacy();u2();u3();uDisbLegacy()};
+      }else unsub=onSnapshot(collection(db,"records"),snap=>{R=new Map();snap.forEach(d=>R.set(d.id,d.data()));render();if(role==="admin")migrateStaffViews()},lerr);
       if(role==="admin")unsubUs=onSnapshot(collection(db,"users"),snap=>{Us=new Map();snap.forEach(d=>Us.set(d.id,d.data()));reqSig="";render()},e=>console.warn("users",e.message));
       if(role==="admin")unsubR=onSnapshot(collection(db,"requests"),snap=>{Rq=new Map();snap.forEach(d=>Rq.set(d.id,d.data()));render()},e=>console.warn("requests",e.message));
       if(role==="admin"||role==="staff")unsubP=onSnapshot(role==="admin"?collection(db,"pending"):query(collection(db,"pending"),where("uid","==",u.uid)),snap=>{P=new Map();snap.forEach(d=>P.set(d.id,d.data()));render()},e=>console.warn("pending",e.message));
@@ -299,23 +322,66 @@ const weeks=()=>[...new Set([...R.values()].map(r=>r.week).concat([...extra]).fi
 /* Week settings live beside the records as meta_w<N>: days open, disbursed or not */
 const META=w=>R.get(`meta_w${w}`)||{};
 const openDays=w=>{const d=META(w).days;return Array.isArray(d)&&d.length?DAYS.filter(x=>d.includes(x)):DAYS.slice()};
-const isDis=w=>!!META(w).disbursed;
+const isDis=w=>(role==="staff"||role==="recorder")?META(w).disbursed!==false:!!META(w).disbursed;
 const wtot=w=>CL.reduce((s,k)=>s+ctot(w,k.id),0);
 const undis=()=>weeks().filter(w=>!isDis(w));
 const dayCount=ws=>ws.reduce((s,w)=>s+openDays(w).length,0);
 const wl=ws=>ws.length<2?"Week "+(ws[0]??""):(ws[ws.length-1]-ws[0]===ws.length-1?`Weeks ${ws[0]}\u2013${ws[ws.length-1]}`:"Weeks "+ws.join(", "));
-const dt=ms=>ms?new Date(ms).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"";
+const dt=ms=>{if(!ms)return"";const v=ms&&typeof ms.toMillis==="function"?ms.toMillis():typeof ms==="number"?ms:Date.parse(ms);return Number.isFinite(v)?new Date(v).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):""};
 const sel=()=>{const v=+$("#wk").value;return v>0?[v]:v<0?undis():weeks()};
 const curWeek=()=>{const v=+$("#wk").value;if(v>0)return v;const u=undis();return u.length?u[u.length-1]:weeks().slice(-1)[0]};
 const esc=t=>String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CYCLE=4;   // weeks collected before each disbursement
 const TNAMES=[...new Set([...B7,...B8,...Object.values(B6DAY),...CL.flatMap(c=>c.t||[])])].sort();
-const VC=ws=>{const a=ws?CLW(ws):CL;return role==="staff"?a.filter(k=>k.id===myCls):a};
+const VC=ws=>{const a=ws?CLW(ws):CL;return role==="staff"?a.filter(k=>k.id===myCls||((myCls==="b2a"||myCls==="b2b")&&k.id==="b2"&&ws.some(w=>w<=9))):role==="recorder"?a.filter(k=>myClasses.includes(k.id)):a};
 const cname=id=>(CL.find(k=>k.id===id)||{}).name||id||"";
 const pendList=()=>[...P.entries()].filter(([id,p])=>p.amounts&&Object.keys(p.amounts).length).sort((a,b)=>a[1].week-b[1].week||String(a[1].cls).localeCompare(String(b[1].cls)));
 const pendCount=()=>role==="admin"?pendList().length:0;
 const pamt=(w,c,d)=>{const p=user&&P.get(`p_w${w}_${c}_${user.uid}`),v=p&&p.amounts?p.amounts[d]:null;return v==null?null:+v};
-const saveMeta=(w,patch)=>setDoc(doc(db,"records",`meta_w${w}`),{week:w,meta:true,...patch,updatedBy:user.email,updatedAt:serverTimestamp()},{merge:true});
+const roundMoney=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+const saveMeta=async(w,patch)=>{
+  const stamp=serverTimestamp();
+  const days=patch.days||openDays(w);
+  const disbursed=Object.prototype.hasOwnProperty.call(patch,"disbursed")?patch.disbursed:isDis(w);
+  const b=writeBatch(db);
+  b.set(doc(db,"records",`meta_w${w}`),{week:w,meta:true,...patch,updatedBy:user.email,updatedAt:stamp},{merge:true});
+  b.set(doc(db,"weekSettings",`w${w}`),{week:w,days,disbursed,updatedAt:stamp},{merge:true});
+  await b.commit();
+};
+// One-time backfill for existing weeks so teachers can see their historical class-only summaries.
+async function migrateStaffViews(){
+  if(role!=="admin"||migrationStarted)return;
+  migrationStarted=true;
+  try{
+    const [settingsSnap,disbSnap]=await Promise.all([
+      getDocs(collection(db,"weekSettings")),
+      getDocs(collection(db,"classDisbursements"))
+    ]);
+    const settingIds=new Set(settingsSnap.docs.map(d=>d.id));
+    const disbIds=new Set(disbSnap.docs.map(d=>d.id));
+    const b=writeBatch(db);let writes=0;
+    for(const w of weeks()){
+      const m=META(w);
+      if(!settingIds.has(`w${w}`)){
+        const data={week:w,days:openDays(w),disbursed:!!m.disbursed,updatedAt:serverTimestamp()};
+        if(m.batch!=null)data.batch=m.batch;
+        if(m.disbursed&&m.at!=null)data.disbursedAt=m.at;
+        b.set(doc(db,"weekSettings",`w${w}`),data);writes++;
+      }
+      if(m.disbursed){
+        for(const k of CL.filter(x=>inW(x,w))){
+          const id=`w${w}_${k.id}`;
+          if(disbIds.has(id))continue;
+          const total=roundMoney(ctot(w,k.id));
+          const data={week:w,cls:k.id,total,school:roundMoney(total*SHARE.school),admin:roundMoney(total*SHARE.admin),teachers:roundMoney(total*SHARE.teachers),batch:m.batch||1,disbursedBy:m.by||"Legacy record"};
+          if(m.at!=null)data.disbursedAt=m.at;
+          b.set(doc(db,"classDisbursements",id),data);writes++;
+        }
+      }
+    }
+    if(writes)await b.commit();
+  }catch(e){console.warn("Could not prepare teacher week/disbursement history:",e.message);migrationStarted=false}
+}
 function calc(ws){
   const t={},add=(n,v)=>t[n]=(t[n]||0)+v,P=SHARE.teachers;
   const cls={},days=DAYS.map(()=>0);
@@ -336,12 +402,15 @@ function calc(ws){
 
 /* ===== Rendering ===== */
 function render(){
-  const cur=$("#wk").value,ws=weeks();
-  $("#wk").innerHTML=`<option value="-1">Not yet disbursed</option><option value="0">All weeks</option>`+ws.map(w=>`<option value="${w}">Week ${w}${isDis(w)?" (disbursed)":""}</option>`).join("");
-  $("#wk").value=(cur==="0"||ws.includes(+cur))?cur:"-1";
+  const cur=$("#wk").value,ws=weeks(),restricted=(role==="staff"||role==="recorder");
+  $("#wk").innerHTML=(restricted
+    ?`<option value="-1">Current cycle (not yet disbursed)</option>`
+    :`<option value="-1">Not yet disbursed</option><option value="0">All weeks</option>`)
+    +ws.map(w=>`<option value="${w}">Week ${w}${isDis(w)?" (disbursed)":""}</option>`).join("");
+  $("#wk").value=(restricted?cur!=="0"&&(cur==="-1"||ws.includes(+cur)):(cur==="0"||ws.includes(+cur)))?cur:"-1";
   show("#seed",role==="admin"&&R.size===0);
   reqCard();dueCard();
-  {const st=role==="staff";["sum","tea","exp"].forEach(t=>{const b=document.querySelector(`#nav [data-t="${t}"]`);if(b)b.style.display=st?"none":""});const aw=$("#addWk");if(aw)aw.style.display=(role==="admin"||role==="recorder")?"":"none"}
+  {const st=role==="staff";["sum","tea","exp"].forEach(t=>{const b=document.querySelector(`#nav [data-t="${t}"]`);if(b)b.style.display=st?"none":""});const aw=$("#addWk");if(aw)aw.style.display=(role==="admin"||(role==="recorder"&&myClasses.length))?"":"none"}
   {const n=pendCount(),b=document.querySelector('#nav [data-t="rec"]');if(b)b.textContent="Record"+(n?` (${n})`:"")}
   ({cls,sum,rec,tea,exp}[tab])();
 }
@@ -361,19 +430,23 @@ function pivot(title,rows,get){
 /* ===== Classes: raw cash collected per class (no sharing, no deductions) ===== */
 function cls(){
   if(role==="staff"&&!myCls){$("#t-cls").innerHTML=`<div class="card">No class has been assigned to you yet. Please ask the administrator.</div>`;return}
-  const ws=sel(),tot=k=>ws.reduce((s,w)=>s+ctot(w,k.id),0),grand=VC(ws).reduce((s,k)=>s+tot(k),0);
+  if(role==="recorder"&&!myClasses.length){$("#t-cls").innerHTML=`<div class="card">No classes have been assigned to your recorder account yet. Please ask the administrator.</div>`;return}
+  const ws=sel(),staff=role==="staff",restricted=staff||role==="recorder",tot=k=>ws.reduce((s,w)=>s+ctot(w,k.id),0),grand=VC(ws).reduce((s,k)=>s+tot(k),0);
   const per=ws.map(w=>VC(ws).reduce((s,k)=>s+ctot(w,k.id),0));
-  const label=ws.length===1?"Week "+ws[0]:ws.length?"Weeks "+ws[0]+" to "+ws[ws.length-1]+" ("+ws.length+" weeks)":"No weeks yet";
+  const label=restricted?(ws.length===0?"No weeks yet":ws.every(isDis)?(ws.length===1?`Week ${ws[0]} (disbursed)`:`Selected disbursed weeks`):ws.length===1?`Week ${ws[0]}`:"Current collection cycle (not yet disbursed)"):(ws.length===1?"Week "+ws[0]:ws.length?"Weeks "+ws[0]+" to "+ws[ws.length-1]+" ("+ws.length+" weeks)":"No weeks yet");
+  const staffCurrent=staff&&ws.length>0&&ws.every(w=>!isDis(w));
   $("#t-cls").innerHTML=`
-  <div class="card"><div class="mut">Total amount collected &ndash; ${label}</div><div class="total">${fmt(grand)}</div>
-   <p class="mut">Raw cash collected, exactly as recorded. No sharing or deductions. Days open: <b>${dayCount(ws)}</b></p></div>
-  ${role==="staff"?shareCard(ws):""}
-  <div class="card"><h3>${role==="staff"?"Your class":"Amount collected by class"}</h3>
+  <div class="card"><div class="mut">${staff?"Your assigned class – total collected":role==="recorder"?"Your assigned classes – total collected":"Total amount collected"} &ndash; ${label}</div><div class="total">${fmt(grand)}</div>
+   <p class="mut">${staff?"Only approved figures for your assigned class are included. Disbursed weeks are shown separately below.":role==="recorder"?"Only figures for classes assigned to your recorder account are included.":"Raw cash collected, exactly as recorded. No sharing or deductions."} Days open: <b>${dayCount(ws)}</b></p></div>
+  ${staff&&staffCurrent?classSplitCard(ws):""}
+  ${staff&&staffCurrent&&myTeacher?shareCard(ws):""}
+  ${staff?staffPendingSummary()+staffDisbursementHistory():role==="recorder"?recorderDisbursementHistory():""}
+  <div class="card"><h3>${staff?"Your assigned class":role==="recorder"?"Your assigned classes":"Amount collected by class"}</h3>
    <div class="crow">${VC(ws).map(k=>`<div><span>${k.name}</span><b>${fmt(tot(k))}</b></div>`).join("")}
-   <div class="gt"><span>${role==="staff"?"Total":"All classes"}</span><b>${fmt(grand)}</b></div></div></div>
+   <div class="gt"><span>${staff?"Your class total":role==="recorder"?"Assigned classes total":"All classes"}</span><b>${fmt(grand)}</b></div></div></div>
   <div class="card"><h3>Week by week</h3><div class="tw"><table class="raw"><thead><tr><th>Class</th>${ws.map(w=>`<th>Wk ${w}</th>`).join("")}<th>Total</th></tr></thead><tbody>
    ${VC(ws).map(k=>`<tr><td>${k.name}</td>${ws.map(w=>`<td>${n2(ctot(w,k.id))}</td>`).join("")}<td class="tt">${n2(tot(k))}</td></tr>`).join("")}</tbody>
-   <tfoot><tr><td>${role==="staff"?"Total":"All classes"}</td>${per.map(v=>`<td>${n2(v)}</td>`).join("")}<td class="tt">${n2(grand)}</td></tr></tfoot></table></div></div>`;
+   <tfoot><tr><td>${staff?"Your class total":role==="recorder"?"Assigned classes total":"All classes"}</td>${per.map(v=>`<td>${n2(v)}</td>`).join("")}<td class="tt">${n2(grand)}</td></tr></table></div></div>`;
 }
 function sum(){
   const c=calc(sel()),pc=x=>Math.round(x*100);
@@ -390,7 +463,7 @@ function sum(){
     <div><span class="sw" style="background:var(--red)"></span>Administration<b>${fmt(c.admin)}</b></div>
     <div><span class="sw" style="background:var(--navy)"></span>Teachers<b>${fmt(c.teachers)}</b></div></div></div>
   <div class="card"><h3>Collected by day</h3><div class="days">${c.days.map((v,i)=>`<div>${fmt(v).replace("GH₵ ","")}<i style="height:${v/max*80}px"></i>${DN[DAYS[i]]}</div>`).join("")}</div></div>
-  <div class="card"><h3>Class collections by week</h3>${pivot("Class",CLW(sel()).map(k=>({id:k.id,n:k.name})),(id,w)=>ctot(w,id))}<p><b>Total: ${fmt(c.total)}</b></p></div>${disbCard()}${staffCard()}`;
+  <div class="card"><h3>Class collections by week</h3>${pivot("Class",VC(sel()).map(k=>({id:k.id,n:k.name})),(id,w)=>ctot(w,id))}<p><b>Total: ${fmt(c.total)}</b></p></div>${disbCard()}${staffCard()}`;
   bindStaff();
   const bd=$("#disb");if(bd)bd.onclick=disburse;const bu=$("#undo");if(bu)bu.onclick=undoDisb;
 }
@@ -406,16 +479,61 @@ $("#rqSend").onclick=()=>{const n=$("#rqName").value.trim().slice(0,60);if(!n||!
 function shareCard(ws){
   const c=myCls,Pt=SHARE.teachers,n=myTeacher;let v=0,partial=false;
   ws.forEach(w=>{
-    const t=ctot(w,c);
+    const effectiveCls=(["b2a","b2b"].includes(c)&&w<=9)?"b2":c;
+    const t=ctot(w,effectiveCls);
     if(!n){v+=t*Pt;return}
     if(c==="b6")DAYS.forEach(d=>{if(B6DAY[d]===n)v+=amt(w,"b6",d)*Pt});
     else if(c==="b7"){if(B7.includes(n))v+=t*Pt/B7.length}
-    else if(c==="b8"){if(B8.includes(n)){v+=t*Pt/B8.length;partial=true}}
+    else if(c==="b8"){
+      if(B8.includes(n)){
+        // Match the administrator's calc(): Basic 8 teachers are also
+        // among the Basic 7 teacher pool and receive both allocations.
+        const b7Total=ctot(w,"b7");
+        v+=(b7Total*Pt/B7.length)+(t*Pt/B8.length);
+        partial=true;
+      }
+    }
+    else if(effectiveCls==="b2"&&(myCls==="b2a"||myCls==="b2b")){
+      const a=((CL.find(k=>k.id==="b2")||{}).t||[]).filter(x=>w>=(JOIN[x]||0));
+      if(a.includes(n))v+=t*Pt/a.length;
+    }
     else{const a=((CL.find(k=>k.id===c)||{}).t||[]).filter(x=>w>=(JOIN[x]||0));if(a.includes(n))v+=t*Pt/a.length}
   });
   const lab=ws.length===1?"Week "+ws[0]:ws.length?"Weeks "+ws[0]+" to "+ws[ws.length-1]:"No weeks yet";
   return `<div class="card" style="border-color:var(--gold)"><div class="mut">${n?"Amount you are going to receive":"Teachers&rsquo; portion for your class"} &ndash; ${lab}</div><div class="total">${fmt(v)}</div>
-   <p class="mut">${n?"Your share of the collections in your class, not yet disbursed.":"Your class teachers&rsquo; portion of the collections, not yet disbursed."}${partial?" Basic 8 teachers also receive a Basic 7 portion, which the administrator adds at disbursement.":""} The figure is paid at the next disbursement.</p></div>`;
+   <p class="mut">${n?"Your share of the collections in your class, not yet disbursed.":"Your class teachers&rsquo; portion of the collections, not yet disbursed."}${partial?" Basic 8 teachers receive their Basic 8 portion plus their Basic 7 portion, matching the administrator's payout calculation.":""} The figure is paid at the next disbursement.</p></div>`;
+}
+function classSplitCard(ws){
+  const total=roundMoney(ws.reduce((s,w)=>s+ctot(w,(["b2a","b2b"].includes(myCls)&&w<=9)?"b2":myCls),0));
+  const school=roundMoney(total*SHARE.school),admin=roundMoney(total*SHARE.admin),teachers=roundMoney(total*SHARE.teachers);
+  const label=ws.length===1?`Week ${ws[0]}`:"Current un-disbursed weeks";
+  return `<div class="card" style="border-color:var(--gold)"><h3>Your class collection split</h3><p class="mut">${label}. These figures are for ${esc(cname(myCls))} only and are not mixed with previous disbursements.</p>
+   <div class="split" role="img" aria-label="School 10%, Administration 25%, Teachers 65%"><div style="flex:${SHARE.school};background:var(--gold);color:#1d2433">10%</div><div style="flex:${SHARE.admin};background:var(--red)">25%</div><div style="flex:${SHARE.teachers};background:var(--navy)">65%</div></div>
+   <div class="legend"><div><span class="sw" style="background:var(--gold)"></span>School 10%<b>${fmt(school)}</b></div><div><span class="sw" style="background:var(--red)"></span>Administration 25%<b>${fmt(admin)}</b></div><div><span class="sw" style="background:var(--navy)"></span>Teachers 65%<b>${fmt(teachers)}</b></div></div></div>`;
+}
+function staffPendingSummary(){
+  if(role!=="staff"||!myCls)return "";
+  const L=[...P.values()].filter(x=>x.cls===myCls&&x.amounts&&Object.keys(x.amounts).length).sort((a,b)=>a.week-b.week);
+  if(!L.length)return "";
+  const rows=L.map(x=>{
+    const changed=Object.values(x.amounts).reduce((a,v)=>a+(Number(v)||0),0);
+    return `<div class="dis"><span>Week ${x.week}<br><span class="mut">Submitted changes awaiting approval</span></span><b>${fmt(changed)}</b></div>`;
+  }).join("");
+  return `<div class="card"><h3>Your entries awaiting approval</h3><p class="mut">These submitted changes are not yet included in the approved class collection total. They will be counted after the administrator approves them.</p>${rows}</div>`;
+}
+function staffDisbursementHistory(){
+  if(role!=="staff"||!myCls)return "";
+  const L=[...D.values()].filter(x=>x.cls===myCls||(["b2a","b2b"].includes(myCls)&&x.cls==="b2"&&x.week<=9)).sort((a,b)=>a.week-b.week);
+  if(!L.length)return `<div class="card"><h3>Disbursed amounts for your class</h3><p class="mut">No class-specific disbursement history is available yet. The administrator's system will prepare the historical breakdown.</p></div>`;
+  return `<div class="card"><h3>Disbursed amounts – ${esc(cname(myCls))}</h3><p class="mut">Each week is shown separately. These completed disbursements are never added to your current collection-cycle total.</p>
+   ${L.map(x=>`<div class="dis" style="display:block"><b>Week ${x.week} – ${fmt(x.total)}</b><div class="legend" style="margin-top:8px"><div><span class="sw" style="background:var(--gold)"></span>School 10%<b>${fmt(x.school)}</b></div><div><span class="sw" style="background:var(--red)"></span>Administration 25%<b>${fmt(x.admin)}</b></div><div><span class="sw" style="background:var(--navy)"></span>Teachers 65%<b>${fmt(x.teachers)}</b></div></div><p class="mut">${x.disbursedAt?`Disbursed: ${dt(x.disbursedAt)} &bull; `:""}Batch ${x.batch||1}</p></div>`).join("")}</div>`;
+}
+function recorderDisbursementHistory(){
+  if(role!=="recorder")return "";
+  const L=[...D.values()].sort((a,b)=>a.week-b.week||String(a.cls).localeCompare(String(b.cls)));
+  if(!L.length)return `<div class="card"><h3>Disbursement history for assigned classes</h3><p class="mut">No disbursement snapshots are available for your assigned classes yet.</p></div>`;
+  return `<div class="card"><h3>Disbursement history – assigned classes</h3><p class="mut">Only the classes assigned to your recorder account are included.</p>
+   ${L.map(x=>`<div class="dis" style="display:block"><b>${esc(cname(x.cls))} – Week ${x.week}: ${fmt(x.total)}</b><div class="legend" style="margin-top:8px"><div><span class="sw" style="background:var(--gold)"></span>School 10%<b>${fmt(x.school)}</b></div><div><span class="sw" style="background:var(--red)"></span>Administration 25%<b>${fmt(x.admin)}</b></div><div><span class="sw" style="background:var(--navy)"></span>Teachers 65%<b>${fmt(x.teachers)}</b></div></div></div>`).join("")}</div>`;
 }
 /* ===== Disbursement due notice (after every CYCLE weeks, on the last open day of the last week) ===== */
 function dueInfo(){
@@ -437,7 +555,7 @@ function dueCard(){
    ${adm?`<button id="goDisb" class="btn">Go to Disbursement</button>`:""}</div>`;
   const g=$("#goDisb");if(g)g.onclick=()=>{document.querySelector('#nav [data-t="sum"]').click();setTimeout(()=>{const x=$("#disb");if(x)x.scrollIntoView({behavior:"smooth",block:"center"})},60)};
 }
-const ROLES={staff:"Staff (needs approval)",recorder:"Recorder",viewer:"Viewer"};
+const ROLES={staff:"Staff (needs approval)",recorder:"Recorder (selected classes)",viewer:"Viewer"};
 function reqCard(){
   const box=$("#reqBox");if(!box)return;
   const L=role==="admin"?[...Rq.values()].sort((a,b)=>(a.at&&a.at.toMillis?a.at.toMillis():0)-(b.at&&b.at.toMillis?b.at.toMillis():0)):[];
@@ -445,25 +563,29 @@ function reqCard(){
   if(sig===reqSig)return;reqSig=sig;
   if(!L.length){box.innerHTML="";return}
   const clsOpts='<option value="">Choose class&hellip;</option>'+CL.map(k=>`<option value="${k.id}">${k.name}</option>`).join("");
-  const teaOpts='<option value="">Teacher (for payout)&hellip;</option>'+TNAMES.map(n=>`<option>${esc(n)}</option>`).join("");
+  const multiClsOpts=CL.map(k=>`<option value="${k.id}">${k.name}</option>`).join("");
+  const candidates=c=>c==="b6"?[...new Set(Object.values(B6DAY))]:c==="b7"?B7:c==="b8"?B8:c==="b2"?["Anita Sobeng","Jessica Appiah"]:((CL.find(k=>k.id===c)||{}).t||[]);
+  const teaOpts=c=>'<option value="">Teacher (for payout)&hellip;</option>'+candidates(c).map(n=>`<option>${esc(n)}</option>`).join("");
   box.innerHTML=`<div class="card" style="border-color:var(--gold);margin:12px 12px 0"><h3>Access requests (${L.length})</h3>
-   <p class="mut">People waiting to be let in. Choose their role and, for staff, the class they will record. A staff member only sees their own class.</p>
+   <p class="mut">People waiting to be let in. Assign one class to a teacher or selected classes to a recorder.</p>
    ${L.map(r=>`<div class="dis" style="flex-wrap:wrap"><span><b>${esc(r.name||r.email)}</b><br><span class="mut">${esc(r.email)}${r.at&&r.at.toMillis?" &bull; "+dt(r.at.toMillis()):""}</span></span>
     <span class="rqctl" data-u="${esc(r.uid)}"><select class="rr">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select>
-    <select class="rc">${clsOpts}</select><select class="rt">${teaOpts}</select>
+    <select class="rc">${clsOpts}</select><select class="rclasses" multiple size="3">${multiClsOpts}</select><select class="rt">${teaOpts("")}</select>
     <button class="btn rq-ok" data-id="${esc(r.uid)}">Allow</button><button class="btn alt rq-no" data-id="${esc(r.uid)}">Decline</button></span></div>`).join("")}</div>`;
-  box.querySelectorAll(".rqctl").forEach(g=>{const rr=g.querySelector(".rr"),rc=g.querySelector(".rc"),rt=g.querySelector(".rt");
-    const sync=()=>{rc.disabled=rt.disabled=rr.value!=="staff"};rr.onchange=sync;sync()});
-  box.querySelectorAll(".rq-ok").forEach(b=>b.onclick=()=>{const g=b.closest(".rqctl");allowUser(b.dataset.id,g.querySelector(".rr").value,g.querySelector(".rc").value,g.querySelector(".rt").value)});
+  box.querySelectorAll(".rqctl").forEach(g=>{const rr=g.querySelector(".rr"),rc=g.querySelector(".rc"),rclasses=g.querySelector(".rclasses"),rt=g.querySelector(".rt");
+    const refreshTeachers=()=>{if(rt)rt.innerHTML=teaOpts(rc.value)};
+    const sync=()=>{rc.hidden=rr.value!=="staff";rclasses.hidden=rr.value!=="recorder";rt.hidden=rr.value!=="staff";refreshTeachers()};rr.onchange=sync;rc.onchange=refreshTeachers;sync()});
+  box.querySelectorAll(".rq-ok").forEach(b=>b.onclick=()=>{const g=b.closest(".rqctl");allowUser(b.dataset.id,g.querySelector(".rr").value,g.querySelector(".rc").value,g.querySelector(".rt").value,[...g.querySelector(".rclasses").selectedOptions].map(o=>o.value))});
   box.querySelectorAll(".rq-no").forEach(b=>b.onclick=()=>declineUser(b.dataset.id));
 }
-async function allowUser(uid,r,c,t){
+async function allowUser(uid,r,c,t,classes=[]){
   const q=Rq.get(uid);if(role!=="admin"||!q)return;
   if(r==="staff"&&!c){alert("Choose the class this staff member will record.");return}
-  if(!confirm(`Allow ${q.name||q.email} as ${ROLES[r]||r}${r==="staff"?" for "+cname(c):""}?`))return;
+  if(r==="recorder"&&!classes.length){alert("Choose at least one class for this recorder.");return}
+  if(!confirm(`Allow ${q.name||q.email} as ${ROLES[r]||r}${r==="staff"?" for "+cname(c):r==="recorder"?" for "+classes.map(cname).join(", "):""}?`))return;
   try{
     const b=writeBatch(db);
-    b.set(doc(db,"users",uid),{role:r,email:q.email,...(q.name?{name:q.name}:{}),...(r==="staff"?{cls:c,...(t?{teacher:t}:{})}:{}),approvedBy:user.email,approvedAt:serverTimestamp()});
+    b.set(doc(db,"users",uid),{role:r,email:q.email,...(q.name?{name:q.name}:{}),...(r==="staff"?{cls:c,...(t?{teacher:t}:{})}:{}),...(r==="recorder"?{classes}:{}),approvedBy:user.email,approvedAt:serverTimestamp()});
     b.delete(doc(db,"requests",uid));await b.commit();
   }catch(e){alert("Could not save: "+e.message)}
 }
@@ -474,18 +596,22 @@ async function declineUser(uid){
 }
 function staffCard(){
   if(role!=="admin")return"";
-  const L=[...Us.entries()].filter(([id,u])=>u.role==="staff");
+  const L=[...Us.entries()].filter(([id,u])=>u.role==="staff"||u.role==="recorder");
   if(!L.length)return"";
   const co=v=>'<option value="">Class&hellip;</option>'+CL.map(k=>`<option value="${k.id}" ${k.id===v?"selected":""}>${k.name}</option>`).join("");
-  const to=v=>'<option value="">Teacher&hellip;</option>'+TNAMES.map(n=>`<option ${n===v?"selected":""}>${esc(n)}</option>`).join("");
-  return `<div class="card"><h3>Staff accounts</h3><p class="mut">Each staff member sees only the class chosen here. Changes save as soon as you pick.</p>
-   ${L.map(([id,u])=>`<div class="dis" style="flex-wrap:wrap"><span><b>${esc(u.name||u.email||id)}</b><br><span class="mut">${esc(u.email||"")}</span></span>
-    <span class="rqctl" data-u="${esc(id)}"><select class="sc">${co(u.cls)}</select><select class="st">${to(u.teacher)}</select><button class="btn alt sx">Remove</button></span></div>`).join("")}</div>`;
+  const candidates=c=>c==="b6"?[...new Set(Object.values(B6DAY))]:c==="b7"?B7:c==="b8"?B8:c==="b2"?["Anita Sobeng","Jessica Appiah"]:((CL.find(k=>k.id===c)||{}).t||[]);
+  const to=(v,c)=>'<option value="">Teacher&hellip;</option>'+candidates(c).map(n=>`<option ${n===v?"selected":""}>${esc(n)}</option>`).join("");
+  const multi=(v=[])=>CL.map(k=>`<option value="${k.id}" ${(v||[]).includes(k.id)?"selected":""}>${k.name}</option>`).join("");
+  return `<div class="card"><h3>Staff and recorder accounts</h3><p class="mut">Teachers are assigned one class. Recorders are assigned one or more selected classes. Changes save when you use the controls.</p>
+   ${L.map(([id,u])=>`<div class="dis" style="flex-wrap:wrap"><span><b>${esc(u.name||u.email||id)}</b><br><span class="mut">${esc(u.email||"")} &bull; ${u.role}</span></span>
+    <span class="rqctl" data-u="${esc(id)}">${u.role==="staff"?`<select class="sc">${co(u.cls)}</select><select class="st">${to(u.teacher,u.cls)}</select>`:`<select class="rsc" multiple size="3">${multi(u.classes||[])}</select>`}<button class="btn alt sx">Remove</button></span></div>`).join("")}</div>`;
 }
 function bindStaff(){
   document.querySelectorAll("#t-sum .rqctl").forEach(g=>{const id=g.dataset.u;
-    const save=async()=>{try{await setDoc(doc(db,"users",id),{cls:g.querySelector(".sc").value,teacher:g.querySelector(".st").value},{merge:true})}catch(e){alert("Could not save: "+e.message)}};
-    g.querySelector(".sc").onchange=save;g.querySelector(".st").onchange=save;
+    const sc=g.querySelector(".sc"),st=g.querySelector(".st"),rsc=g.querySelector(".rsc");
+    const save=async()=>{try{const patch=sc?{cls:sc.value,teacher:st.value}:{classes:[...rsc.selectedOptions].map(o=>o.value)};await setDoc(doc(db,"users",id),patch,{merge:true})}catch(e){alert("Could not save: "+e.message)}};
+    if(sc)sc.onchange=()=>{if(st){st.innerHTML='<option value="">Teacher&hellip;</option>'+candidates(sc.value).map(n=>`<option>${esc(n)}</option>`).join("");}save()};
+    if(st)st.onchange=save;if(rsc)rsc.onchange=save;
     g.querySelector(".sx").onclick=async()=>{if(!confirm("Remove this person's access? They will have to ask again."))return;try{const b=writeBatch(db);b.delete(doc(db,"users",id));await b.commit()}catch(e){alert("Could not save: "+e.message)}};
   });
 }
@@ -493,7 +619,7 @@ function disbCard(){
   const und=undis().filter(w=>wtot(w)>0),tot=und.reduce((s,w)=>s+wtot(w),0),bs={},pn=pendCount();
   weeks().filter(isDis).forEach(w=>{const m=META(w),k=m.batch||1;(bs[k]=bs[k]||{w:[],t:0,at:m.at,by:m.by});bs[k].w.push(w);bs[k].t+=+m.total||0});
   const keys=Object.keys(bs).sort((a,b)=>b-a);
-  const hist=keys.map((k,i)=>{const x=bs[k];return `<div class="dis"><span>${wl(x.w)}<br><span class="mut">${dt(x.at)}${x.by?" &bull; "+x.by:""}</span></span><b>${fmt(x.t)}</b></div>`+(i===0&&role==="admin"?`<button id="undo" class="btn alt" style="margin:8px 0 4px">Undo last disbursement</button>`:"")}).join("");
+  const hist=role==="admin"?keys.map((k,i)=>{const x=bs[k];return `<div class="dis"><span>${wl(x.w)}<br><span class="mut">${dt(x.at)}${x.by?" &bull; "+x.by:""}</span></span><b>${fmt(x.t)}</b></div>`+(i===0&&role==="admin"?`<button id="undo" class="btn alt" style="margin:8px 0 4px">Undo last disbursement</button>`:"")}).join(""):"";
   return `<div class="card"><h3>Disbursement</h3><div class="mut">Collected, not yet disbursed</div><div class="total">${fmt(tot)}</div>
    <p class="mut">${und.length?wl(und):"Nothing waiting. A fresh week is ready."}</p>
    <p class="mut">Cycle: ${Math.min(undis().length,CYCLE)} of ${CYCLE} weeks. A notice appears on the last open day of week ${CYCLE}.</p>
@@ -509,8 +635,26 @@ async function disburse(){
   try{
     const batch=1+Math.max(0,...[...R.values()].filter(r=>r.meta&&r.disbursed).map(r=>r.batch||0));
     const b=writeBatch(db),stamp={updatedBy:user.email,updatedAt:serverTimestamp()};
-    und.forEach(w=>b.set(doc(db,"records",`meta_w${w}`),{week:w,meta:true,days:openDays(w),disbursed:true,batch,total:wtot(w),at:Date.now(),by:user.email,...stamp},{merge:true}));
-    if(!undis().some(w=>!und.includes(w))){const n=Math.max(0,...weeks())+1;b.set(doc(db,"records",`meta_w${n}`),{week:n,meta:true,days:DAYS.slice(),...stamp},{merge:true})}
+    und.forEach(w=>{
+      const weekTotal=wtot(w),disbursedAt=serverTimestamp();
+      b.set(doc(db,"records",`meta_w${w}`),{week:w,meta:true,days:openDays(w),disbursed:true,batch,total:weekTotal,at:Date.now(),by:user.email,...stamp},{merge:true});
+      b.set(doc(db,"weekSettings",`w${w}`),{week:w,days:openDays(w),disbursed:true,batch,disbursedAt,updatedAt:serverTimestamp()},{merge:true});
+      CL.filter(k=>inW(k,w)).forEach(k=>{
+        const classTotal=roundMoney(ctot(w,k.id));
+        b.set(doc(db,"classDisbursements",`w${w}_${k.id}`),{
+          week:w,cls:k.id,total:classTotal,
+          school:roundMoney(classTotal*SHARE.school),
+          admin:roundMoney(classTotal*SHARE.admin),
+          teachers:roundMoney(classTotal*SHARE.teachers),
+          batch,disbursedAt,disbursedBy:user.email
+        });
+      });
+    });
+    if(!undis().some(w=>!und.includes(w))){
+      const n=Math.max(0,...weeks())+1;
+      b.set(doc(db,"records",`meta_w${n}`),{week:n,meta:true,days:DAYS.slice(),...stamp},{merge:true});
+      b.set(doc(db,"weekSettings",`w${n}`),{week:n,days:DAYS.slice(),disbursed:false,updatedAt:serverTimestamp()},{merge:true});
+    }
     await b.commit();$("#wk").value="-1";
   }catch(e){alert("Could not save: "+e.message)}
 }
@@ -521,9 +665,17 @@ async function undoDisb(){
   if(!confirm(`Undo the disbursement of ${fmt(tot)} (${wl(ws)})?\n\nThese weeks will be unlocked and counted as not yet disbursed again.`))return;
   try{
     const b=writeBatch(db),stamp={updatedBy:user.email,updatedAt:serverTimestamp()};
-    ws.forEach(w=>b.set(doc(db,"records",`meta_w${w}`),{disbursed:false,batch:deleteField(),total:deleteField(),at:deleteField(),by:deleteField(),...stamp},{merge:true}));
-    const nw=ws[ws.length-1]+1;   // the empty week that was started automatically is removed
-    if(weeks().includes(nw)&&!isDis(nw)&&wtot(nw)===0&&![...P.values()].some(p=>p.week===nw)){b.delete(doc(db,"records",`meta_w${nw}`));extra.delete(nw)}
+    ws.forEach(w=>{
+      b.set(doc(db,"records",`meta_w${w}`),{disbursed:false,batch:deleteField(),total:deleteField(),at:deleteField(),by:deleteField(),...stamp},{merge:true});
+      b.set(doc(db,"weekSettings",`w${w}`),{week:w,days:openDays(w),disbursed:false,batch:deleteField(),disbursedAt:deleteField(),updatedAt:serverTimestamp()},{merge:true});
+      CL.filter(x=>inW(x,w)).forEach(x=>b.delete(doc(db,"classDisbursements",`w${w}_${x.id}`)));
+    });
+    const nw=ws[ws.length-1]+1;
+    if(weeks().includes(nw)&&!isDis(nw)&&wtot(nw)===0&&![...P.values()].some(p=>p.week===nw)){
+      b.delete(doc(db,"records",`meta_w${nw}`));
+      b.delete(doc(db,"weekSettings",`w${nw}`));
+      extra.delete(nw);
+    }
     await b.commit();$("#wk").value="-1";
   }catch(e){alert("Could not save: "+e.message)}
 }
@@ -531,9 +683,9 @@ async function approve(ids){
   const b=writeBatch(db);let n=0;
   ids.forEach(id=>{
     const p=P.get(id);if(!p||isDis(p.week))return;
-    const od=openDays(p.week),am={};
-    Object.entries(p.amounts||{}).forEach(([d,v])=>{if(od.includes(d)&&v!=null)am[d]=Math.max(0,+v||0)});
-    if(Object.keys(am).length){b.set(doc(db,"records",`w${p.week}_${p.cls}`),{week:p.week,cls:p.cls,amounts:am,updatedBy:p.by,approvedBy:user.email,updatedAt:serverTimestamp()},{merge:true});n++}
+    const am={};
+    DAYS.forEach(d=>{const v=p.amounts&&p.amounts[d]!=null?p.amounts[d]:amt(p.week,p.cls,d);am[d]=Math.max(0,Number(v)||0)});
+    if(Object.keys(p.amounts||{}).length){b.set(doc(db,"records",`w${p.week}_${p.cls}`),{week:p.week,cls:p.cls,amounts:am,updatedBy:p.by,approvedBy:user.email,updatedAt:serverTimestamp()},{merge:true});n++}
     b.delete(doc(db,"pending",id));
   });
   try{await b.commit()}catch(e){alert("Could not save: "+e.message)}
@@ -558,9 +710,10 @@ function rec(){
   const w=curWeek();
   if(!w){$("#t-rec").innerHTML=pendCard()+`<div class="card">No weeks yet. Choose <b>Add week</b> to start recording.</div>`;return}
   if(role==="staff"&&!myCls){$("#t-rec").innerHTML=`<div class="card">No class has been assigned to you yet. Please ask the administrator.</div>`;return}
+  if(role==="recorder"&&!myClasses.length){$("#t-rec").innerHTML=`<div class="card">No classes have been assigned to your recorder account yet. Please ask the administrator.</div>`;return}
   const dis=isDis(w),m=META(w),adm=role==="admin",stf=role==="staff",can=(adm||role==="recorder"||stf)&&!dis,od=openDays(w);
-  const note=dis?`Disbursed on ${dt(m.at)}. This week is locked.`:stf?"Your entries are saved as pending (yellow). They count in the totals only after the administrator approves them.":can?"Changes save automatically and appear on every signed-in device.":"You have view-only access.";
-  $("#t-rec").innerHTML=pendCard()+`<div class="card"><h3>Week ${w} collections</h3>
+  const note=dis?`Disbursed on ${dt(m.disbursedAt||m.at)}. This week is locked.`:stf?"Your entries are saved as pending (yellow). They count in the totals only after the administrator approves them.":can?"Changes save automatically and appear on every signed-in device.":"You have view-only access.";
+  $("#t-rec").innerHTML=(stf?(isDis(w)?staffPendingSummary()+staffDisbursementHistory():staffPendingSummary()+classSplitCard([w])+staffDisbursementHistory()):role==="recorder"?recorderDisbursementHistory():pendCard())+`<div class="card"><h3>Week ${w} collections</h3>
    <p class="mut">${note}</p>
    <div class="mut">Days open for collection</div>
    <div class="chips" id="dayChips">${DAYS.map(d=>`<button type="button" class="chip ${od.includes(d)?"on":""}" data-d="${d}" ${adm&&!dis?"":"disabled"}>${DN[d]}</button>`).join("")}</div>
@@ -619,7 +772,7 @@ function exp(){
   $("#dl").onclick=()=>{
     const ws=sel(),c=calc(ws),wb=XLSX.utils.book_new();
     const a=[["Week","Class",...DAYS.map(d=>DN[d]),"Total"]];
-    ws.forEach(w=>CL.filter(k=>inW(k,w)).forEach(k=>a.push([w,k.name,...DAYS.map(d=>amt(w,k.id,d)),ctot(w,k.id)])));
+    ws.forEach(w=>VC([w]).forEach(k=>a.push([w,k.name,...DAYS.map(d=>amt(w,k.id,d)),ctot(w,k.id)])));
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),"Collections");
     const t=[["Teacher","Amount (GH₵)"],...Object.entries(c.t).map(([n,v])=>[n,+v.toFixed(2)])];
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t),"Teachers");
@@ -635,8 +788,16 @@ $("#nav").onclick=e=>{const b=e.target.closest("button");if(!b)return;tab=b.data
   document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b));
   ["cls","sum","rec","tea","exp"].forEach(t=>show("#t-"+t,t===tab));render()};
 $("#wk").onchange=render;
-$("#addWk").onclick=()=>{
-  if(role!=="admin"){const n=Math.max(0,...weeks())+1;extra.add(n);render();$("#wk").value=n;render();return}
+$("#addWk").onclick=async()=>{
+  if(role==="recorder"){
+    const n=Math.max(0,...weeks())+1;
+    try{
+      await setDoc(doc(db,"weekSettings",`w${n}`),{week:n,days:DAYS.slice(),disbursed:false,updatedAt:serverTimestamp()});
+      extra.add(n);render();$("#wk").value=n;render();
+    }catch(e){alert("Could not create week: "+e.message)}
+    return;
+  }
+  if(role!=="admin")return;
   document.querySelectorAll("#newDays .chip").forEach(b=>b.classList.add("on"));show("#addBox",true);
 };
 $("#newDays").onclick=e=>{const b=e.target.closest(".chip");if(b)b.classList.toggle("on")};
