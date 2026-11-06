@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: V.13 - professional Excel downloads (branded Summary, Collections and Teachers sheets with crest, colours, formulas, print layout); emails cleaned before display. Previous: V.12 - teacher dashboard is one compact summary: choose From/To week, see the amount collected and the 10% / 25% / 65% split; staff Excel download now needs administrator approval (one download per approval, own class only). Previous: V.11 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
+<!-- Version: V.14 - removed the built-in Weeks 6-9 import data and the import button, so no collection figures are visible in the page source. Previous: V.13 - professional Excel downloads (branded Summary, Collections and Teachers sheets with crest, colours, formulas, print layout); emails cleaned before display. Previous: V.12 - teacher dashboard is one compact summary: choose From/To week, see the amount collected and the 10% / 25% / 65% split; staff Excel download now needs administrator approval (one download per approval, own class only). Previous: V.11 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -162,7 +162,7 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
       <li>By signing in you agree to use this system only for official school purposes.</li>
     </ul>
   </div>
-  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.13 &bull; &copy; 2026</div>
+  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.14 &bull; &copy; 2026</div>
 </section>
 
 <section id="vPend" class="card login hide">
@@ -188,7 +188,6 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
   <div class="tools">
     <label for="wk">Period</label><select id="wk"></select>
     <button id="addWk" class="btn alt">Add week</button>
-    <button id="seed" class="btn alt hide">Import Oct–Nov data</button>
   </div>
   <div id="addBox" class="card hide"><b>New week &ndash; select the days open for collection</b>
     <div class="chips" id="newDays"><button type="button" class="chip on" data-d="M">Mon</button><button type="button" class="chip on" data-d="T">Tue</button><button type="button" class="chip on" data-d="W">Wed</button><button type="button" class="chip on" data-d="Th">Thu</button><button type="button" class="chip on" data-d="F">Fri</button></div>
@@ -244,12 +243,6 @@ const CL=[
 /* A class can be limited to certain weeks: from = first week, to = last week */
 const inW=(k,w)=>(!k.from||w>=k.from)&&(!k.to||w<=k.to);
 const CLW=ws=>CL.filter(k=>ws.some(w=>inW(k,w)));
-const SEED={
-6:{b8:[45,45,45,42,36],b7:[42,36,45,42,35],b6:[40,40,30,0,0],b5:[60,52,50,50,52],b4b:[20,0,20,20,20],b3:[30,30,30,24,26],b2:[30,20,30,20,20],b1b:[30,30,30,30,30],b1a:[0,60,0,0,0]},
-7:{b8:[45,45,42,42,36],b7:[42,42,42,36,36],b6:[40,40,40,30,0],b5:[60,50,44,46,46],b4b:[20,20,20,20,20],b3:[26,26,30,24,26],b2:[30,20,0,30,30],b1b:[30,30,30,30,30],b1a:[0,110,16,20,10]},
-8:{b8:[45,45,45,45,0],b7:[45,45,45,40,0],b6:[40,40,30,0,0],b5:[60,50,42,46,0],b4a:[20,20,24,42,0],b4b:[20,20,20,20,0],b3:[24,26,24,26,0],b2:[30,34,30,24,0],b1b:[24,26,26,25,0],b1a:[50,24,20,0,0]},
-9:{b8:[45,32],b7:[45,42],b6:[40,40],b5:[64,52],b4a:[42,40],b4b:[20,20],b3:[30,24],b2:[40,32],b1b:[24,30],b1a:[42,20]}
-};
 
 const $=s=>document.querySelector(s);
 const fmt=n=>"GH₵ "+(+n||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -272,7 +265,7 @@ if(!ok){show("#cfg",true);show("#vLogin",true)}else{
         askAccess(u);
         unsubU=onSnapshot(doc(db,"users",u.uid),x=>{if(x.exists())location.reload()},()=>{});
         return}
-      {const ud=s.data();role=ud.role;myCls=ud.cls||"";myClasses=Array.isArray(ud.classes)?ud.classes:[];myTeacher=ud.teacher||""}show("#vPend",false);show("#vApp",true);show("#seed",role==="admin");
+      {const ud=s.data();role=ud.role;myCls=ud.cls||"";myClasses=Array.isArray(ud.classes)?ud.classes:[];myTeacher=ud.teacher||""}show("#vPend",false);show("#vApp",true);
       const lerr=e=>alert("Could not load data: "+e.message);
       if(role==="staff"||role==="recorder"){
         let A=new Map(),Alegacy=new Map(),B=new Map();
@@ -412,7 +405,6 @@ function render(){
     :`<option value="-1">Not yet disbursed</option><option value="0">All weeks</option>`)
     +ws.map(w=>`<option value="${w}">Week ${w}${isDis(w)?" (disbursed)":""}</option>`).join("");
   $("#wk").value=(restricted?cur!=="0"&&(cur==="-1"||ws.includes(+cur)):(cur==="0"||ws.includes(+cur)))?cur:"-1";
-  show("#seed",role==="admin"&&R.size===0);
   reqCard();dueCard();
   {const st=role==="staff";["sum","tea","exp"].forEach(t=>{const b=document.querySelector(`#nav [data-t="${t}"]`);if(b)b.style.display=st&&t!=="exp"?"none":""});const aw=$("#addWk");if(aw)aw.style.display=(role==="admin"||(role==="recorder"&&myClasses.length))?"":"none"}
   {const n=pendCount(),b=document.querySelector('#nav [data-t="rec"]');if(b)b.textContent="Record"+(n?` (${n})`:"")}
@@ -1030,15 +1022,6 @@ $("#mkWk").onclick=async()=>{
   const n=Math.max(0,...weeks())+1;
   try{await saveMeta(n,{days})}catch(e){alert("Could not save: "+e.message);return}
   extra.add(n);show("#addBox",false);render();$("#wk").value=n;render();
-};
-$("#seed").onclick=async()=>{
-  if(!confirm("Import the Week 6–9 data from the Excel sheet?"))return;
-  const b=writeBatch(db);
-  for(const [w,rows] of Object.entries(SEED))for(const [c,v] of Object.entries(rows)){
-    const put=(id,arr)=>b.set(doc(db,"records",`w${w}_${id}`),{week:+w,cls:id,amounts:Object.fromEntries(DAYS.map((d,i)=>[d,arr[i]||0])),updatedBy:user.email,updatedAt:serverTimestamp()});
-    put(c,v);
-  }
-  await b.commit();
 };
 </script>
 </body>
