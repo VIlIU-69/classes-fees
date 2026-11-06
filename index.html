@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version: V.12 - teacher dashboard is one compact summary: choose From/To week, see the amount collected and the 10% / 25% / 65% split; staff Excel download now needs administrator approval (one download per approval, own class only). Previous: V.11 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
+<!-- Version: V.13 - professional Excel downloads (branded Summary, Collections and Teachers sheets with crest, colours, formulas, print layout); emails cleaned before display. Previous: V.12 - teacher dashboard is one compact summary: choose From/To week, see the amount collected and the 10% / 25% / 65% split; staff Excel download now needs administrator approval (one download per approval, own class only). Previous: V.11 - Anita Onuoha renamed Anita Sobeng; from Week 10 Basic 2 splits into Basic 2a (Anita Sobeng) and Basic 2b (Jessica Appiah), each with its own recording row; Weeks 6-9 keep the combined Basic 2. Previous: V.09 - teacher payout fix (Basic 7 portion no longer counted twice for Basic 8 teachers), Patience Ocran full name, teacher-share check on the Teachers tab, seed data updated to Weeks 6-9. Previous: V.08 - staff are assigned a class when allowed and see only that class (collections + expected share); staff accounts list; disbursement-due notice after every 4th week. History: V.01 sign-in; V.02 crest; V.03 header/sign-out; V.04 Classes page; V.05 days + disbursement; V.06 undo + staff approval; V.07 access requests -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -7,7 +7,7 @@
 <title>Pentecost Preparatory School – Extra Classes Collection</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
 :root{--navy:#17356b;--red:#b3261e;--gold:#c9a227;--paper:#f8f7f3;--ink:#1d2433;--line:#d9d6cc;--mut:#667085;--lb:#bfe0ff;--lb2:#e3f1ff}
 *{box-sizing:border-box}
@@ -162,7 +162,7 @@ td.closed{background:#f3f3f3;color:#999;font-size:.72rem}
       <li>By signing in you agree to use this system only for official school purposes.</li>
     </ul>
   </div>
-  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.12 &bull; &copy; 2026</div>
+  <div class="lcred">Designed &amp; developed by <strong>STEMRidge Tech</strong> &bull; V.13 &bull; &copy; 2026</div>
 </section>
 
 <section id="vPend" class="card login hide">
@@ -668,7 +668,7 @@ function disbCard(){
   const und=undis().filter(w=>wtot(w)>0),tot=und.reduce((s,w)=>s+wtot(w),0),bs={},pn=pendCount();
   weeks().filter(isDis).forEach(w=>{const m=META(w),k=m.batch||1;(bs[k]=bs[k]||{w:[],t:0,at:m.at,by:m.by});bs[k].w.push(w);bs[k].t+=+m.total||0});
   const keys=Object.keys(bs).sort((a,b)=>b-a);
-  const hist=role==="admin"?keys.map((k,i)=>{const x=bs[k];return `<div class="dis"><span>${wl(x.w)}<br><span class="mut">${dt(x.at)}${x.by?" &bull; "+x.by:""}</span></span><b>${fmt(x.t)}</b></div>`+(i===0&&role==="admin"?`<button id="undo" class="btn alt" style="margin:8px 0 4px">Undo last disbursement</button>`:"")}).join(""):"";
+  const hist=role==="admin"?keys.map((k,i)=>{const x=bs[k];return `<div class="dis"><span>${wl(x.w)}<br><span class="mut">${dt(x.at)}${x.by?" &bull; "+esc(x.by):""}</span></span><b>${fmt(x.t)}</b></div>`+(i===0&&role==="admin"?`<button id="undo" class="btn alt" style="margin:8px 0 4px">Undo last disbursement</button>`:"")}).join(""):"";
   return `<div class="card"><h3>Disbursement</h3><div class="mut">Collected, not yet disbursed</div><div class="total">${fmt(tot)}</div>
    <p class="mut">${und.length?wl(und):"Nothing waiting. A fresh week is ready."}</p>
    <p class="mut">Cycle: ${Math.min(undis().length,CYCLE)} of ${CYCLE} weeks. A notice appears on the last open day of week ${CYCLE}.</p>
@@ -749,7 +749,7 @@ function pendCard(){
   const rows=L.map(([id,p])=>{
     const locked=isDis(p.week);
     const det=DAYS.filter(d=>p.amounts[d]!=null).map(d=>`${DN[d]} ${n2(amt(p.week,p.cls,d))}\u2192${n2(+p.amounts[d])}`).join(" &bull; ");
-    return `<div class="dis" style="flex-wrap:wrap"><span>Wk ${p.week} &bull; ${cn(p.cls)}<br><span class="mut">${p.by||""}<br>${det}${locked?" &bull; week already disbursed":""}</span></span>
+    return `<div class="dis" style="flex-wrap:wrap"><span>Wk ${p.week} &bull; ${cn(p.cls)}<br><span class="mut">${esc(p.by||"")}<br>${det}${locked?" &bull; week already disbursed":""}</span></span>
      <span style="display:flex;gap:6px;align-items:center">${locked?"":`<button class="btn pa" data-id="${id}">Approve</button>`}<button class="btn alt pr" data-id="${id}">Reject</button></span></div>`}).join("");
   return `<div class="card" style="border-color:var(--gold)"><h3>Waiting for your approval (${L.length})</h3>
    <p class="mut">Staff entries are saved but not counted until you approve. Each shows the recorded figure \u2192 the staff figure. Approved figures replace the day&rsquo;s figure; nothing is added on top.</p>${rows}
@@ -819,18 +819,154 @@ function tea(){
 function exp(){
   if(role==="staff")return expStaff();
   $("#t-exp").innerHTML=`<div class="card"><h3>Download Excel</h3><p>Exports the period chosen above: collections, teacher amounts and the summary.</p><button id="dl" class="btn">Download Excel sheet</button></div>`;
-  $("#dl").onclick=()=>{
-    const ws=sel(),c=calc(ws),wb=XLSX.utils.book_new();
-    const a=[["Week","Class",...DAYS.map(d=>DN[d]),"Total"]];
-    ws.forEach(w=>VC([w]).forEach(k=>a.push([w,k.name,...DAYS.map(d=>amt(w,k.id,d)),ctot(w,k.id)])));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),"Collections");
-    const t=[["Teacher","Amount (GH₵)"],...Object.entries(c.t).map(([n,v])=>[n,+v.toFixed(2)])];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t),"Teachers");
-    const s=[["Pentecost Preparatory School – Tarkwa"],["Period",$("#wk").value==="0"?"All weeks":"Week "+$("#wk").value],
-      ["Days open",dayCount(ws)],["Total collected",+c.total.toFixed(2)],["School 10%",+c.school.toFixed(2)],["Administration 25%",+c.admin.toFixed(2)],["Teachers 65%",+c.teachers.toFixed(2)]];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s),"Summary");
-    XLSX.writeFile(wb,"Extra_Classes_Collection.xlsx");
+  $("#dl").onclick=async()=>{
+    if(!window.ExcelJS){alert("The Excel library did not load. Check your internet connection and try again.");return}
+    const ws=sel();
+    try{await xlSave(xlAdminBook(ws),"Extra_Classes_Collection_"+xlTag(ws)+".xlsx")}catch(e){alert("Could not create the Excel file: "+e.message)}
   };
+}
+
+/* ===== Professional Excel workbooks (ExcelJS) ===== */
+const XC={navy:"FF17356B",gold:"FFC9A227",lb:"FFE3F1FF",lb2:"FFBFE0FF",zebra:"FFF4F7FC",line:"FFD0D7E2",white:"FFFFFFFF",ink:"FF1D2433",grey:"FF667085",green:"FF1F8A4C",amber:"FFB45309",red:"FFB3261E"};
+const XT={style:"thin",color:{argb:XC.line}},XB={top:XT,left:XT,bottom:XT,right:XT};
+const XM='#,##0.00',XN='#,##0.00;-#,##0.00;"–"',SCHOOL="Pentecost Preparatory School – Tarkwa";
+const xf=c=>({type:"pattern",pattern:"solid",fgColor:{argb:c}});
+const xlStamp=()=>new Date().toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+const xlTag=ws=>!ws.length?"none":ws.length===1?"Week"+ws[0]:"Weeks"+ws[0]+"-"+ws[ws.length-1];
+const xlPeriod=ws=>{const r=!ws.length?"No weeks":ws.length===1?`Week ${ws[0]}`:`Weeks ${ws[0]} to ${ws[ws.length-1]} (${ws.length} weeks)`;return +$("#wk").value<0?"Not yet disbursed – "+r:r};
+const r2=n=>Math.round((+n||0)*100)/100,r6=n=>Math.round((+n||0)*1e6)/1e6;
+function xlBook(){const wb=new ExcelJS.Workbook();wb.creator=SCHOOL;wb.created=new Date();wb.title="Extra Classes Collection";return wb}
+async function xlSave(wb,name){
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+  a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+/* navy banner with crest, gold rule, then the sheet is ready for a table from row 6 */
+function xlSheet(wb,name,widths,title,period){
+  const ws=wb.addWorksheet(name,{properties:{tabColor:{argb:XC.navy}},views:[{showGridLines:false}]}),n=widths.length;
+  widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
+  const L=[SCHOOL,title,`Period: ${period}   •   Generated ${xlStamp()}`],H=[30,20,18];
+  for(let r=1;r<=3;r++){
+    ws.getRow(r).height=H[r-1];
+    for(let c=1;c<=n;c++)ws.getCell(r,c).fill=xf(XC.navy);
+    ws.mergeCells(r,2,r,n);
+    const k=ws.getCell(r,2);k.value=L[r-1];k.alignment={vertical:"middle",indent:1};
+    k.font=r===1?{name:"Calibri",size:16,bold:true,color:{argb:XC.white}}:r===2?{name:"Calibri",size:12,bold:true,color:{argb:XC.gold}}:{name:"Calibri",size:10,color:{argb:"FFDDE6F5"}};
+  }
+  for(let c=1;c<=n;c++)ws.getCell(4,c).fill=xf(XC.gold);
+  ws.getRow(4).height=4;
+  const el=document.getElementById("lcrest"),src=el&&el.src;
+  if(src&&src.startsWith("data:image")){try{ws.addImage(wb.addImage({base64:src.split(",")[1],extension:"jpeg"}),{tl:{col:0.15,row:0.12},ext:{width:58,height:58}})}catch(e){}}
+  ws.pageSetup={orientation:"landscape",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.6,header:.3,footer:.3}};
+  ws.headerFooter.oddFooter="&L&8"+SCHOOL+"&C&8Page &P of &N&R&8Confidential – authorised staff only";
+  return ws;
+}
+function xlHead(ws,r,labels){
+  labels.forEach((t,i)=>{const c=ws.getCell(r,i+1);c.value=t;c.font={bold:true,size:11,color:{argb:XC.white}};c.fill=xf(XC.navy);c.border=XB;c.alignment={horizontal:i===0?"left":"center",vertical:"middle",wrapText:true,indent:i===0?1:0}});
+  ws.getRow(r).height=24;
+}
+function xlTotal(ws,r,c1,c2){
+  for(let c=c1;c<=c2;c++){const k=ws.getCell(r,c);k.font={bold:true,size:11,color:{argb:XC.navy}};k.fill=xf(XC.lb2);k.border={top:{style:"medium",color:{argb:XC.navy}},bottom:XT,left:XT,right:XT}}
+  ws.getRow(r).height=22;
+}
+function xlSection(ws,r,text,n){
+  ws.mergeCells(r,1,r,n);const k=ws.getCell(r,1);k.value=text;k.font={bold:true,size:12,color:{argb:XC.navy}};k.fill=xf(XC.lb);k.alignment={vertical:"middle",indent:1};ws.getRow(r).height=22;
+}
+const xlCell=(ws,r,c,v,o={})=>{const k=ws.getCell(r,c);k.value=v;k.border=XB;k.font=o.font||{color:{argb:XC.ink}};if(o.fill)k.fill=xf(o.fill);if(o.fmt)k.numFmt=o.fmt;k.alignment={horizontal:o.h||"right",vertical:"middle",indent:o.h==="left"?1:0};return k};
+
+/* Summary: key figures and the 10 / 25 / 65 split, then collections by class */
+function xlSummary(wb,o){
+  const ws=xlSheet(wb,"Summary",[36,22,14],o.title,o.period);
+  xlSection(ws,6,"Key figures",3);xlHead(ws,7,["Item","Amount (GH₵)","Share"]);
+  const t=r2(o.total),rows=[["Total collected",t,1],["School",r2(t*SHARE.school),SHARE.school],["Administration",r2(t*SHARE.admin),SHARE.admin],["Teachers",r2(t*SHARE.teachers),SHARE.teachers]];
+  const cols=[null,XC.gold,XC.red,XC.navy];
+  rows.forEach(([lab,v,pc],i)=>{
+    const r=8+i;
+    xlCell(ws,r,1,lab,{h:"left",font:{bold:i===0,color:{argb:XC.ink}},fill:i===0?XC.lb:XC.white});
+    xlCell(ws,r,2,i===0?v:{formula:`ROUND(B8*C${r},2)`,result:v},{fmt:XM,font:{bold:true,color:{argb:i===0?XC.navy:XC.ink}},fill:i===0?XC.lb:XC.white});
+    xlCell(ws,r,3,pc,{fmt:"0%",h:"center",fill:i===0?XC.lb:XC.white});
+    if(cols[i])ws.getCell(r,1).border={...XB,left:{style:"thick",color:{argb:cols[i]}}};
+  });
+  let r=12;
+  if(o.days!=null){xlCell(ws,r,1,"Days open in this period",{h:"left"});xlCell(ws,r,2,o.days,{fmt:"0"});xlCell(ws,r,3,"",{});r++}
+  r+=1;xlSection(ws,r,"Collected by class",3);r++;xlHead(ws,r,["Class","Collected (GH₵)","% of total"]);
+  const first=r+1;
+  o.classes.forEach((k,i)=>{r++;const f=i%2?XC.zebra:XC.white;
+    xlCell(ws,r,1,k.n,{h:"left",fill:f});xlCell(ws,r,2,r2(k.t),{fmt:XN,fill:f});
+    xlCell(ws,r,3,{formula:`IF($B$8=0,0,B${r}/$B$8)`,result:t?k.t/t:0},{fmt:"0.0%",h:"center",fill:f})});
+  r++;xlCell(ws,r,1,"Total",{h:"left"});
+  xlCell(ws,r,2,{formula:`SUM(B${first}:B${r-1})`,result:r2(o.classes.reduce((a,k)=>a+k.t,0))},{fmt:XM});
+  xlCell(ws,r,3,{formula:`SUM(C${first}:C${r-1})`,result:t?1:0},{fmt:"0.0%",h:"center"});
+  xlTotal(ws,r,1,3);
+  ws.getCell(r,1).alignment={vertical:"middle",indent:1};ws.getCell(r,3).alignment={horizontal:"center",vertical:"middle"};
+  r+=2;ws.mergeCells(r,1,r,3);const n=ws.getCell(r,1);n.value=`Prepared by ${o.by} on ${xlStamp()}. Figures are the approved collections only.`;n.font={italic:true,size:9,color:{argb:XC.grey}};
+  ws.views=[{showGridLines:false}];
+}
+
+/* Collections: one row per week and class, Monday to Friday, totals by formula */
+function xlCollections(wb,o){
+  const W=[9,24,...DAYS.map(()=>12),15,...(o.status?[14]:[])],ws=xlSheet(wb,"Collections",W,o.title,o.period),H=6;
+  const labels=["Week","Class",...DAYS.map(d=>DN[d]),"Total (GH₵)",...(o.status?["Status"]:[])];
+  xlHead(ws,H,labels);
+  let r=H,last=null,band=false;
+  o.rows.forEach(x=>{
+    r++;if(x.w!==last){band=!band;last=x.w}const f=band?XC.white:XC.zebra;
+    xlCell(ws,r,1,x.w,{h:"center",fill:f});xlCell(ws,r,2,x.n,{h:"left",fill:f});
+    x.v.forEach((v,i)=>xlCell(ws,r,3+i,v,{fmt:XN,fill:f}));
+    xlCell(ws,r,8,{formula:`SUM(C${r}:G${r})`,result:r2(x.v.reduce((a,b)=>a+b,0))},{fmt:XN,fill:f,font:{bold:true,color:{argb:XC.navy}}});
+    if(o.status)xlCell(ws,r,9,x.status,{h:"center",fill:f,font:{bold:true,color:{argb:x.status==="Disbursed"?XC.green:XC.amber}}});
+  });
+  if(!o.rows.length){ws.mergeCells(H+1,1,H+1,labels.length);const k=ws.getCell(H+1,1);k.value="No collections have been recorded for this period.";k.font={italic:true,color:{argb:XC.grey}}}
+  else{
+    const first=H+1;r++;ws.mergeCells(r,1,r,2);xlCell(ws,r,1,"TOTAL",{h:"left"});
+    for(let c=3;c<=8;c++){const L=ws.getColumn(c).letter;xlCell(ws,r,c,{formula:`SUM(${L}${first}:${L}${r-1})`,result:r2(o.rows.reduce((a,x)=>a+(c<8?x.v[c-3]:x.v.reduce((p,q)=>p+q,0)),0))},{fmt:XM})}
+    if(o.status)xlCell(ws,r,9,"",{});
+    xlTotal(ws,r,1,labels.length);ws.getCell(r,1).alignment={vertical:"middle",indent:1};
+    ws.autoFilter={from:{row:H,column:1},to:{row:r-1,column:labels.length}};
+  }
+  ws.views=[{state:"frozen",ySplit:H,showGridLines:false}];ws.pageSetup.printTitlesRow=`${H}:${H}`;
+}
+
+/* Teachers: amount each teacher is due, week by week, with a balance check against the 65% share */
+function xlTeachers(wb,o){
+  const n=o.weeks.length+2,ws=xlSheet(wb,"Teachers",[30,...o.weeks.map(()=>13),17],"Teacher amounts by week",o.period),H=6;
+  xlHead(ws,H,["Teacher",...o.weeks.map(w=>"Wk "+w),"Total (GH₵)"]);
+  let r=H;
+  o.rows.forEach((x,i)=>{r++;const f=i%2?XC.zebra:XC.white;
+    xlCell(ws,r,1,x.n,{h:"left",fill:f});
+    x.v.forEach((v,j)=>xlCell(ws,r,2+j,v,{fmt:XN,fill:f}));
+    const a=ws.getColumn(2).letter,b=ws.getColumn(n-1).letter;
+    xlCell(ws,r,n,o.weeks.length?{formula:`SUM(${a}${r}:${b}${r})`,result:r2(x.v.reduce((p,q)=>p+q,0))}:0,{fmt:XN,fill:f,font:{bold:true,color:{argb:XC.navy}}})});
+  const first=H+1;r++;xlCell(ws,r,1,"TOTAL",{h:"left"});
+  for(let c=2;c<=n;c++){const L=ws.getColumn(c).letter;xlCell(ws,r,c,{formula:`SUM(${L}${first}:${L}${r-1})`,result:r2(o.rows.reduce((a,x)=>a+(c<n?x.v[c-2]:x.v.reduce((p,q)=>p+q,0)),0))},{fmt:XM})}
+  xlTotal(ws,r,1,n);ws.getCell(r,1).alignment={vertical:"middle",indent:1};
+  const tot=r,pool=o.pool,sum=o.rows.reduce((a,x)=>a+x.v.reduce((p,q)=>p+q,0),0),ok=Math.abs(sum-pool)<0.005,tl=ws.getColumn(n).letter;
+  r+=2;ws.mergeCells(r,1,r,n-1);xlCell(ws,r,1,"Teachers’ share (65% of the total collected)",{h:"left"});xlCell(ws,r,n,r2(pool),{fmt:XM});
+  r++;ws.mergeCells(r,1,r,n-1);xlCell(ws,r,1,"Difference (should be 0.00)",{h:"left"});
+  xlCell(ws,r,n,{formula:`ROUND(${tl}${tot}-${tl}${r-1},2)`,result:r2(sum-pool)},{fmt:XM,font:{bold:true,color:{argb:ok?XC.green:XC.red}}});
+  r++;ws.mergeCells(r,1,r,n);const k=ws.getCell(r,1);k.value=ok?"✔ Balanced: the amounts above add up exactly to the teachers’ 65% share.":"✖ Check: the amounts above do not match the teachers’ 65% share.";k.font={bold:true,color:{argb:ok?XC.green:XC.red}};
+  ws.views=[{state:"frozen",ySplit:H,xSplit:1,showGridLines:false}];ws.pageSetup.printTitlesRow=`${H}:${H}`;
+}
+
+function xlAdminBook(ws){
+  const wb=xlBook(),per=xlPeriod(ws),c=calc(ws),cl=VC(ws),by=user.email;
+  xlSummary(wb,{title:"Extra Classes Collection – Summary",period:per,total:c.total,days:dayCount(ws),by,classes:cl.map(k=>({n:k.name,t:ws.reduce((a,w)=>a+ctot(w,k.id),0)}))});
+  const rows=[];ws.forEach(w=>VC([w]).forEach(k=>rows.push({w,n:k.name,v:DAYS.map(d=>amt(w,k.id,d))})));
+  xlCollections(wb,{title:"Collections by week and class",period:per,rows});
+  if((role==="admin"||role==="viewer")&&ws.length){
+    const cw={};ws.forEach(w=>cw[w]=calc([w]).t);
+    const rows=Object.keys(c.t).map(n=>{const v=ws.map(w=>r6(cw[w][n]||0));return{n,v,t:v.reduce((a,b)=>a+b,0)}}).sort((a,b)=>b.t-a.t);
+    xlTeachers(wb,{weeks:ws,rows,pool:c.teachers,period:per});
+  }
+  return wb;
+}
+function xlStaffBook(ws){
+  const wb=xlBook(),per=xlPeriod(ws),by=user.email,rows=[],tot={};
+  ws.forEach(w=>{const id=(["b2a","b2b"].includes(myCls)&&w<=9)?"b2":myCls;rows.push({w,n:cname(id),v:DAYS.map(d=>amt(w,id,d)),status:isDis(w)?"Disbursed":"Open"});tot[cname(id)]=(tot[cname(id)]||0)+ctot(w,id)});
+  const total=Object.values(tot).reduce((a,b)=>a+b,0);
+  xlSummary(wb,{title:"Class summary – "+cname(myCls),period:per,total,days:null,by,classes:Object.entries(tot).map(([n,t])=>({n,t}))});
+  xlCollections(wb,{title:"Collections – "+cname(myCls),period:per,rows,status:true});
+  return wb;
 }
 
 /* ===== Staff Excel download: needs the administrator's approval, one download per approval ===== */
@@ -864,10 +1000,8 @@ function expStaff(){
     dl.disabled=true;const wkReq=DR.wk;
     try{await setDoc(doc(db,"downloadRequests",user.uid),{status:"used",usedAt:serverTimestamp()},{merge:true})}catch(e){alert("Could not start the download: "+e.message);dl.disabled=false;return}
     const ws=wkReq?[wkReq]:weeks();
-    const a=[["Week","Class",...DAYS.map(d=>DN[d]),"Total","Status"]];
-    ws.forEach(w=>VC([w]).forEach(k=>a.push([w,k.name,...DAYS.map(d=>amt(w,k.id,d)),ctot(w,k.id),isDis(w)?"Disbursed":"Open"])));
-    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),"My class");
-    XLSX.writeFile(wb,"My_Class_Collections.xlsx");
+    if(!window.ExcelJS){alert("The Excel library did not load. Check your internet connection and ask the administrator to approve again.");return}
+    try{await xlSave(xlStaffBook(ws),"My_Class_"+xlTag(ws)+".xlsx")}catch(e){alert("Could not create the Excel file: "+e.message)}
   };
 }
 
